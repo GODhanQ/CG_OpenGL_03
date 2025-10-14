@@ -233,14 +233,14 @@ void SetupPlane(int shape, int plane_loc) {
 void SetupCubeVertex() {
 	glm::vec3 cube_position[] = {
 		// eight vertices of a cube | range : Shape_Range
-		(-Shape_Range, -Shape_Range, -Shape_Range), // 0
-		(Shape_Range, -Shape_Range, -Shape_Range), // 1
-		(Shape_Range,  Shape_Range, -Shape_Range), // 2
-		(-Shape_Range,  Shape_Range, -Shape_Range), // 3
-		(-Shape_Range, -Shape_Range,  Shape_Range), // 4
-		(Shape_Range, -Shape_Range,  Shape_Range), // 5
-		(Shape_Range,  Shape_Range,  Shape_Range), // 6
-		(-Shape_Range,  Shape_Range,  Shape_Range)  // 7
+		(-Shape_Range, -Shape_Range, -Shape_Range),		// 0
+		(Shape_Range, -Shape_Range, -Shape_Range),		// 1
+		(Shape_Range,  Shape_Range, -Shape_Range),		// 2
+		(-Shape_Range,  Shape_Range, -Shape_Range),		// 3
+		(-Shape_Range, -Shape_Range,  Shape_Range),		// 4
+		(Shape_Range, -Shape_Range,  Shape_Range),		// 5
+		(Shape_Range,  Shape_Range,  Shape_Range),		// 6
+		(-Shape_Range,  Shape_Range,  Shape_Range)		// 7
 	}
 }
 void SetupPyramidVertex();
