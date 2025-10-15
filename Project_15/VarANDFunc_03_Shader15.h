@@ -15,6 +15,7 @@
 #include <chrono>
 #include <algorithm>
 #include <map>
+#include <string>
 #define NOMINMAX
 #include <windows.h>
 
@@ -23,9 +24,49 @@ struct Vertex_glm {
 	glm::vec3 color;
 };
 
+struct Plane {
+	int Plane_Index;
+	//std::vector<Vertex_glm> vertices;
+	std::vector<unsigned int> indices;
+	bool isSet;
+
+	Plane() : Plane_Index(-1), isSet(false) {}
+	Plane(int index) : Plane_Index(index), isSet(false) {}
+
+	void Enable() { isSet = true; }
+	void Disable() { isSet = false; }
+};
+
+struct PlaneManager {
+	std::vector<Plane> planes;
+	//std::vector<Vertex_glm> all_vertices;
+	std::vector<unsigned int> all_indices;
+
+	void PrepareBuffer() {
+		//all_vertices.clear();
+		all_indices.clear();
+		unsigned int index_offset = 0;
+
+		for (auto& plane : planes) {
+			if (plane.isSet) {
+				//for (const auto& vertex : plane.vertices) {
+				//	all_vertices.push_back(vertex);
+				//}
+				for (const auto& idx : plane.indices) {
+					all_indices.push_back(idx);
+				}
+			}
+		}
+	}
+};
+
 extern GLint Window_width, Window_height;
 
 extern float Shape_Range;
+
+extern std::vector<Vertex_glm> Axis_Vertex;
+extern std::vector<unsigned int> Axis_Index;
+extern std::vector<glm::vec3> All_Vertices;
 
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);
@@ -41,6 +82,7 @@ char* filetobuf(const char* file);
 GLuint make_shaderProgram(const char* vertPath, const char* fragPath);
 
 void MakePerspactiveMatrix();
-void SetupPlane(int shape, int plane_loc);
-void SetupCubeVertex();
-void SetupPyramidVertex();
+void SetupVertices();
+void SetupCube();
+void SetupPyramid();
+void DisableAll();

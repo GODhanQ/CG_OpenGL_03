@@ -144,6 +144,9 @@
     <None Include="Fragment_Shader.glsl" />
     <None Include="Vertex_Shader.glsl" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="Image.jpg" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
