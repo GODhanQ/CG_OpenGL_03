@@ -156,7 +156,18 @@ void KeyBoard(unsigned char key, int x, int y) {
 		KeyBoard(rand_number.x + '0', 0, 0);
 		KeyBoard(rand_number.y + '0', 0, 0);
 		break;
-		// exit
+	case 'u':
+		// on/off back face culling
+		if (glIsEnabled(GL_CULL_FACE)) {
+			glDisable(GL_CULL_FACE);
+			std::cout << "GL_CULL_FACE Disabled\n";
+		}
+		else {
+			glEnable(GL_CULL_FACE);
+			std::cout << "GL_CULL_FACE Enabled\n";
+		}
+
+		break;
 	case 'q':
 		exit(0);
 	}
