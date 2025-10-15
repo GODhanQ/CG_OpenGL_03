@@ -1,5 +1,5 @@
 #define _CRT_SECURE_NO_WARNINGS
-#include "VarANDFunc_03_Shader15.h"
+#include "VarANDFunc_03_Shader16.h"
 
 auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 std::default_random_engine dre(seed);
@@ -14,8 +14,8 @@ GLuint fragmentShader;
 GLuint VBO_axis, VAO_axis, IBO_axis;
 GLuint VBO, VAO, IBO;
 
-GLuint PerspectiveMatrixID;
-glm::mat4 Perspective_Matrix(1.0f);
+GLuint PerspectiveMatrixID, FigureTypeID, ComTransMatrixID;
+glm::mat4 Perspective_Matrix(1.0f), ComTransMatrix(1.0f), UnitMatrix(1.0f);
 
 PlaneManager plane_manager;
 
@@ -27,7 +27,7 @@ int main(int argc, char** argv)
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
 	glutInitWindowPosition(500, 50);
 	glutInitWindowSize(Window_width, Window_height);
-	glutCreateWindow("Example15");
+	glutCreateWindow("Example16");
 
 	glewExperimental = GL_TRUE;
 	GLenum err = glewInit();
@@ -43,15 +43,18 @@ int main(int argc, char** argv)
 
 	glFrontFace(GL_CCW);
 	glCullFace(GL_BACK);
-	//glEnable(GL_CULL_FACE);
+	glEnable(GL_CULL_FACE);
+	glEnable(GL_DEPTH_TEST);
 	std::cout << "Setup GL_CULL_FACE Completed\n";
 
 	INIT_BUFFER();
+	EnableAll(Figure_Type::CUBE);
 	std::cout << "INIT BUFFER Completed\n";
 
 	glutDisplayFunc(drawScene);
 	glutReshapeFunc(Reshape);
 	glutKeyboardFunc(KeyBoard);
+	glutSpecialFunc(SpecialKey);
 	glutMouseFunc(MouseClick);
 	glutIdleFunc(drawScene);
 
@@ -59,30 +62,39 @@ int main(int argc, char** argv)
 }
 
 GLvoid drawScene() {
-	GLfloat rColor{ 0.3f }, gColor{ 0.3f }, bColor{ 0.3f };
+	GLfloat rColor{ 0.2f }, gColor{ 0.2f }, bColor{ 0.2f };
 	glClearColor(rColor, gColor, bColor, 1.0f);
-	glEnable(GL_DEPTH_TEST);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	MakeComTransMatrix();
 	plane_manager.PrepareBuffer();
-
-	PerspectiveMatrixID = glGetUniformLocation(shaderProgramID, "Perspective_Matrix");
-	glUniformMatrix4fv(PerspectiveMatrixID, 1, GL_FALSE, &Perspective_Matrix[0][0]);
 
 	glUseProgram(shaderProgramID);
 
+	PerspectiveMatrixID = glGetUniformLocation(shaderProgramID, "Perspective_Matrix");
+	glUniformMatrix4fv(PerspectiveMatrixID, 1, GL_FALSE, &Perspective_Matrix[0][0]);
+	FigureTypeID = glGetUniformLocation(shaderProgramID, "Figure_Type");
+	ComTransMatrixID = glGetUniformLocation(shaderProgramID, "ComTransMatrix");
+	if (is_Traslate_Mode) {
+		glUniformMatrix4fv(ComTransMatrixID, 1, GL_FALSE, &ComTransMatrix[0][0]);
+	} else {
+		glUniformMatrix4fv(ComTransMatrixID, 1, GL_FALSE, &UnitMatrix[0][0]);
+	}
+
 	// Draw Axis
 	glBindVertexArray(VAO_axis);
+	glUniform1i(FigureTypeID, 2);
 	glLineWidth(1.0f);
 	glDrawElements(GL_LINES, Axis_Index.size(), GL_UNSIGNED_INT, 0);
 
 	// Draw Planes
 	glBindVertexArray(VAO);
-
-	size_t offset = 0; // 오프셋 누적 변수
+	glLineWidth(3.0f);
+	size_t offset = 0;
 	for (size_t i = 0; i < plane_manager.planes.size(); ++i) {
 		if (plane_manager.planes[i].isSet) {
-			// i를 평면의 고유 인덱스로 사용하여 오프셋 계산
+			glUniform1i(FigureTypeID, plane_manager.planes[i].Figure_Type);
+
 			if (plane_manager.planes[i].indices.size() == 6)
 				glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * offset));
 			else if (plane_manager.planes[i].indices.size() == 3)
@@ -103,58 +115,66 @@ GLvoid Reshape(int w, int h) {
 
 void KeyBoard(unsigned char key, int x, int y) {
 	switch (key) {
-		// Cube
-		// 1,2 for Z axis
-	case '1':
-	case '2':
-		// 3,4 for Y axis
-	case '3':
-	case '4':
-		// 5,6 for X axis
-	case '5':
-	case '6': {
-		int index = key - '1';
-		if (index >= 0 && index < plane_manager.planes.size()) {
-			plane_manager.planes[index].isSet = !plane_manager.planes[index].isSet;
-			std::cout << "Cube Plane " << key << (plane_manager.planes[index].isSet ? " Enabled\n" : " Disabled\n");
+	case 'w':
+	case 'W':
+		// Draw type Wireframe on/off
+		GLint polygonMode[2];
+		glGetIntegerv(GL_POLYGON_MODE, polygonMode);
+
+		if (polygonMode[0] == GL_LINE) {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			std::cout << "GL_POLYGON_MODE : FILL\n";
 		}
-		break;
-	}
-		// Pyramid
-		// 7,8 for X axis
-	case '7':
-	case '8':
-		// 9,0 for y axis
-	case '9':
-	case '0': {
-		int index = -1;
-		if (key >= '7' && key <= '9') {
-			index = key - '7' + 6; // '7'~'9' -> index 6~8
-		}
-		else if (key == '0') {
-			index = 9; // '0' -> index 9
+		else {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			std::cout << "GL_POLYGON_MODE : LINE\n";
 		}
 
-		if (index != -1 && index < plane_manager.planes.size()) {
-			plane_manager.planes[index].isSet = !plane_manager.planes[index].isSet;
-			std::cout << "Pyramid Plane " << (index - 5) << (plane_manager.planes[index].isSet ? " Enabled\n" : " Disabled\n");
-		}
+		glutPostRedisplay();
 		break;
-	}
+	case 'x':
+		// rotate +X axis
+		if (Rotate_Amount.x < 0) Rotate_Amount.x = 0;
+		Rotate_Amount.x += 0.05f;
+
+		std::cout << "Spin +X, Spin Amount : " << Rotate_Amount.x << std::endl;
+		glutPostRedisplay();
+		break;
+	case 'X':
+		// rotate -X axis
+		if (Rotate_Amount.x > 0) Rotate_Amount.x = 0;
+		Rotate_Amount.x -= 0.05f;
+
+		std::cout << "Spin -X, Spin Amount : " << Rotate_Amount.x << std::endl;
+		glutPostRedisplay();
+		break;
+	case 'y':
+		// rotate +Y axis
+		if (Rotate_Amount.y < 0) Rotate_Amount.y = 0;
+		Rotate_Amount.y += 0.05f;
+
+		std::cout << "Spin +Y, Spin Amount : " << Rotate_Amount.y << std::endl;
+		glutPostRedisplay();
+		break;
+	case 'Y':
+		// rotate -Y axis
+		if (Rotate_Amount.y > 0) Rotate_Amount.y = 0;
+		Rotate_Amount.y -= 0.05f;
+
+		std::cout << "Spin -Y, Spin Amount : " << Rotate_Amount.y << std::endl;
+		glutPostRedisplay();
+		break;
 	case 'c':
 		DisableAll();
-		glm::vec2 rand_number = { uid_1_6(dre), uid_1_6(dre) };
-		KeyBoard(rand_number.x + '0', 0, 0);
-		KeyBoard(rand_number.y + '0', 0, 0);
+		EnableAll(Figure_Type::CUBE);
 
+		std::cout << "Enable All Cube Planes\n";
 		break;
-	case 't':
+	case 'p':
 		DisableAll();
-		rand_number = { uid_7_10(dre), 4 };
-		if (rand_number.x == 10) rand_number.x = 0;
+		EnableAll(Figure_Type::PYRAMID);
 
-		KeyBoard(rand_number.x + '0', 0, 0);
-		KeyBoard(rand_number.y + '0', 0, 0);
+		std::cout << "Enable All Pyramid Planes\n";
 		break;
 	case 'u':
 		// on/off back face culling
@@ -168,8 +188,72 @@ void KeyBoard(unsigned char key, int x, int y) {
 		}
 
 		break;
+	case 'h':
+		// on/off depth test
+		if (glIsEnabled(GL_DEPTH_TEST)) {
+			glDisable(GL_DEPTH_TEST);
+			std::cout << "GL_DEPTH_TEST Disabled\n";
+		}
+		else {
+			glEnable(GL_DEPTH_TEST);
+			std::cout << "GL_DEPTH_TEST Enabled\n";
+		}
+
+		break;
+	case 's':
+		Transform = glm::vec3(0.0f, 0.0f, 0.0f);
+		Rotation_Angles = glm::vec3(0.0f, 0.0f, 0.0f);
+		Rotate_Amount = glm::vec3(0.0f, 0.0f, 0.0f);
+		Trans_Amount = glm::vec3(0.0f, 0.0f, 0.0f);
+		ComTransMatrix = glm::mat4(1.0f);
+		
+		std::cout << "Reset Transformations\n";
+		glutPostRedisplay();
+		break;
+	case 't':
+		is_Traslate_Mode = !is_Traslate_Mode;
+
+		std::cout << "Translate Mode : " << (is_Traslate_Mode ? "On" : "Off") << std::endl;
+		break;
 	case 'q':
 		exit(0);
+	}
+}
+void SpecialKey(int key, int x, int y) {
+	switch (key) {
+	case GLUT_KEY_UP:
+		// move +Y axis
+		Trans_Amount.y = 0;
+		Trans_Amount.y += 0.004f;
+		std::cout << "Move +Y, Move Amount: " << Trans_Amount.y << std::endl;
+
+		glutPostRedisplay();
+		break;
+	case GLUT_KEY_DOWN:
+		// move -Y axis
+		Trans_Amount.y = 0;
+		Trans_Amount.y -= 0.004f;
+		std::cout << "Move -Y, Move Amount : " << Trans_Amount.y << std::endl;
+
+		glutPostRedisplay();
+		break;
+
+	case GLUT_KEY_LEFT:
+		// move -X axis
+		Trans_Amount.x = 0;
+		Trans_Amount.x += 0.004f;
+		std::cout << "Move -X, Move Amount : " << Trans_Amount.x << std::endl;
+
+		glutPostRedisplay();
+		break;
+	case GLUT_KEY_RIGHT:
+		// move +X axis
+		Trans_Amount.y = 0;
+		Trans_Amount.x -= 0.004f;
+		std::cout << "Move +X, Move Amount : " << Trans_Amount.x << std::endl;
+
+		glutPostRedisplay();
+		break;
 	}
 }
 void MouseClick(int button, int state, int x, int y) {
@@ -187,13 +271,13 @@ std::pair<float, float> ConvertScreenToOpenGL(int screen_x, int screen_y) {
 
 void INIT_BUFFER() {
 	SetupVertices();
+
+	plane_manager.planes.clear();
 	SetupCube();
 	SetupPyramid();
 
 	MakePerspactiveMatrix();
 	plane_manager.PrepareBuffer();
-
-	DisableAll();
 
 	std::cout << "Setup Axis...\n";
 	glGenVertexArrays(1, &VAO_axis);
@@ -316,6 +400,27 @@ void MakePerspactiveMatrix() {
 	Perspective_Matrix = glm::rotate(Perspective_Matrix, glm::radians(120.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	Perspective_Matrix = glm::rotate(Perspective_Matrix, glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 }
+void MakeComTransMatrix() {
+	Transform += Trans_Amount;
+	Rotation_Angles += Rotate_Amount;
+
+	if (Rotation_Angles.x >= 360.0f) Rotation_Angles.x -= 360.0f;
+	if (Rotation_Angles.y >= 360.0f) Rotation_Angles.y -= 360.0f;
+	if (Rotation_Angles.z >= 360.0f) Rotation_Angles.z -= 360.0f;
+
+	// 1. 이동 행렬을 먼저 만듭니다.
+	glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), Transform);
+
+	// 2. 회전 행렬을 만듭니다.
+	glm::mat4 rotationMatrix = glm::mat4(1.0f);
+	rotationMatrix = glm::rotate(rotationMatrix, glm::radians(Rotation_Angles.x), glm::vec3(1.0f, 0.0f, 0.0f));
+	rotationMatrix = glm::rotate(rotationMatrix, glm::radians(Rotation_Angles.y), glm::vec3(0.0f, 1.0f, 0.0f));
+	rotationMatrix = glm::rotate(rotationMatrix, glm::radians(Rotation_Angles.z), glm::vec3(0.0f, 0.0f, 1.0f));
+
+	// 3. 최종 변환 행렬 = 이동 * 회전
+	// 이 순서는 정점에 회전을 먼저 적용(제자리 회전)하고, 그 다음 이동시킵니다.
+	ComTransMatrix = translationMatrix * rotationMatrix;
+}
 
 void SetupVertices() {
 	all_vertices.clear();
@@ -331,7 +436,6 @@ void SetupVertices() {
 
 	all_vertices = temp_vertices;
 }
-
 void SetupCube() {
 	// make 6 planes
 	// center at origin(0,0,0)
@@ -347,9 +451,9 @@ void SetupCube() {
 	};
 
 
-	plane_manager.planes.clear();
 	for (int i = 0; i < 6; ++i) {
 		Plane plane(i + 1);
+		plane.Figure_Type = Figure_Type::CUBE;
 		for (int j = 0; j < 6; ++j) {
 			//plane.vertices.push_back(all_vertices[plane_indices[i][j]]);
 			plane.indices.push_back(plane_indices[i][j]);
@@ -359,8 +463,6 @@ void SetupCube() {
 		plane.Enable();
 		plane_manager.planes.push_back(plane);
 	}
-	
-	//plane_manager.planes[0].Enable();
 }
 void SetupPyramid() {
 	// make 4 planes
@@ -378,6 +480,7 @@ void SetupPyramid() {
 		int index = i + 7;
 		if (index == 10) index = 0;
 		Plane plane(index);
+		plane.Figure_Type = Figure_Type::PYRAMID;
 		for (int j = 0; j < 3; ++j) {
 			//plane.vertices.push_back(all_vertices[plane_indices[i][j]]);
 			plane.indices.push_back(plane_indices[i][j]);
@@ -391,5 +494,20 @@ void SetupPyramid() {
 void DisableAll() {
 	for (auto& plane : plane_manager.planes) {
 		plane.Disable();
+	}
+}
+void EnableAll() {
+	for (auto& plane : plane_manager.planes) {
+		plane.Enable();
+	}
+}
+void EnableAll(int figure_type) {
+	for (auto& plane : plane_manager.planes) {
+		if (plane.Figure_Type == figure_type) {
+			plane.Enable();
+		}
+		else {
+			plane.Disable();
+		}
 	}
 }
