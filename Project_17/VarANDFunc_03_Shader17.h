@@ -81,11 +81,14 @@ extern GLuint VBO, VAO, IBO;
 
 extern GLuint PerspectiveMatrixID, FigureTypeID, ComTransMatrixID, PlaneNumberID;
 extern GLuint Shape_RangeID, DoorTransMatrixID, ScalingMatrixID, SideRotateMatrixID;
+extern GLuint PyramidPXMatrixID, PyramidMXMatrixID, PyramidPZMatrixID, PyramidMZMatrixID, PyramidSeqIndexID;
 
 extern float Shape_Range;
 extern float DoorMaxAngle, Door_ProgressChangeAmount;
 extern float MaxScale, Scaling_ProgressChangeAmount;
 extern float SideRotate_Angle, SideRotate_Amount;
+extern float Pyramid_DoorMaxAngle, Pyramid_Door_ProgressChangeAmount, prevPyramidAngle;
+extern int Current_Pyramid_SeqIndex;
 
 extern std::vector<Vertex_glm> Axis_Vertex;
 extern std::vector<unsigned int> Axis_Index;
@@ -95,6 +98,7 @@ extern glm::vec3 Rotation_Angles, Transform, Rotate_Amount, Trans_Amount;
 
 extern bool is_Traslate_Mode, Cube_Mode, is_DoorAnimating;
 extern bool is_ScalingAnimating, is_SideRotateAnimating;
+extern bool is_PyramidSeqAnimating, is_PyramidAllAnimating, is_OneSeqEnd;
 
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);

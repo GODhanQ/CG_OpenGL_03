@@ -9,6 +9,7 @@ std::uniform_int_distribution<int> uid_7_10(7, 10);
 
 glm::mat4 Perspective_Matrix(1.0f), ComTransMatrix(1.0f), UnitMatrix(1.0f);
 glm::mat4 DoorTrans_Matrix(1.0f), Scaling_Matrix(1.0f), SideRotate_Matrix(1.0f);
+glm::mat4 PyramidPX_Matrix(1.0f), PyramidMX_Matrix(1.0f), PyramidPZ_Matrix(1.0f), PyramidMZ_Matrix(1.0f);
 
 PlaneManager plane_manager;
 std::vector<Vertex_glm> all_vertices;
@@ -148,12 +149,23 @@ void KeyBoard(unsigned char key, int x, int y) {
 	case 'o':
 	case 'O':
 	// Open/Close the Pyramids's side planes at once
-
+		if (is_PyramidSeqAnimating) is_PyramidSeqAnimating = false;
+		is_PyramidAllAnimating = !is_PyramidAllAnimating;
+		Current_Pyramid_SeqIndex = 0;
+		
+		std::cout << "Pyramid All Plane Animation : " << (is_PyramidAllAnimating ? "On" : "Off") << std::endl;
+		glutPostRedisplay();
+		break;
 	case 'r':
 	case 'R':
 	// Open/Close the Pyramids's side planes in order
+		if (is_PyramidAllAnimating) is_PyramidAllAnimating = false;
+		is_PyramidSeqAnimating = !is_PyramidSeqAnimating;
+		Current_Pyramid_SeqIndex = 1;
 
-
+		std::cout << "Pyramid All Plane Animation : " << (is_PyramidAllAnimating ? "On" : "Off") << std::endl;
+		glutPostRedisplay();
+		break;
 	// Unified Command
 	case 'y':
 	case 'Y':
@@ -172,6 +184,9 @@ void KeyBoard(unsigned char key, int x, int y) {
 		ComTransMatrix = glm::mat4(1.0f);
 
 		Cube_Mode = true;
+
+		is_DoorAnimating = false; is_ScalingAnimating = false; is_SideRotateAnimating = false;
+		is_PyramidAllAnimating = false; is_PyramidSeqAnimating = false;
 
 		std::cout << "Reset Transformations\n";
 		std::cout << "Enable Cube Planes\n";
@@ -410,6 +425,36 @@ void MakeComTransMatrix() {
 	else {
 		SideRotate_Matrix = glm::mat4(1.0f);
 	}
+
+	if (is_PyramidAllAnimating || is_PyramidSeqAnimating) {
+		float elapsedTime = glutGet(GLUT_ELAPSED_TIME);
+		float normalizedSin = (sin(elapsedTime * Pyramid_Door_ProgressChangeAmount) + 1.0f) / 2.0f;
+		float temp_MaxAngle = Pyramid_DoorMaxAngle;
+		if (is_PyramidSeqAnimating) temp_MaxAngle = temp_MaxAngle / 2.0f;
+		float angle = glm::radians(normalizedSin * temp_MaxAngle);
+
+		if (is_PyramidSeqAnimating && angle < glm::radians(0.01f) && prevPyramidAngle > angle) {
+			std::cout << "Current Pyramid Seq Index : " << Current_Pyramid_SeqIndex++ << std::endl;
+			if (Current_Pyramid_SeqIndex > 4) {
+				Current_Pyramid_SeqIndex = 1;
+			}
+			prevPyramidAngle = 0.0f;
+		}
+		else {
+			prevPyramidAngle = angle;
+		}
+
+		PyramidPX_Matrix = glm::rotate(glm::mat4(1.0f), -angle, glm::vec3(0.0f, 0.0f, 1.0f));
+		PyramidMX_Matrix = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0.0f, 0.0f, 1.0f));
+		PyramidPZ_Matrix = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(1.0f, 0.0f, 0.0f));
+		PyramidMZ_Matrix = glm::rotate(glm::mat4(1.0f), -angle, glm::vec3(1.0f, 0.0f, 0.0f));
+	}
+	else {
+		PyramidPX_Matrix = glm::mat4(1.0f);
+		PyramidMX_Matrix = glm::mat4(1.0f);
+		PyramidPZ_Matrix = glm::mat4(1.0f);
+		PyramidMZ_Matrix = glm::mat4(1.0f);
+	}
 }
 
 void SetupVertices() {
@@ -464,6 +509,9 @@ void SetupPyramid() {
 		{ 8, 5, 4 },		// +Y Plane
 		{ 8, 7, 6 },		// -Y Plane
 	};
+	const int bottom_plane_indices[6] = {
+		4, 5, 6, 4, 6, 7,
+	};
 
 	for (int i = 0; i < 4; ++i) {
 		int index = i + 7;
@@ -471,14 +519,21 @@ void SetupPyramid() {
 		Plane plane(index);
 		plane.Figure_Type = Figure_Type::PYRAMID;
 		for (int j = 0; j < 3; ++j) {
-			//plane.vertices.push_back(all_vertices[plane_indices[i][j]]);
 			plane.indices.push_back(plane_indices[i][j]);
 		}
 
-		//plane.Disable();
 		plane.Enable();
 		plane_manager.planes.push_back(plane);
 	}
+
+	Plane bottom_plane(11);
+	bottom_plane.Figure_Type = Figure_Type::PYRAMID;
+	for (int j = 0; j < 6; ++j) {
+		bottom_plane.indices.push_back(bottom_plane_indices[j]);
+	}
+
+	bottom_plane.Enable();
+	plane_manager.planes.push_back(bottom_plane);
 }
 void DisableAll() {
 	for (auto& plane : plane_manager.planes) {
@@ -511,14 +566,22 @@ void ComposeUniformVar() {
 	DoorTransMatrixID = glGetUniformLocation(shaderProgramID, "DoorTrans_Matrix");
 	ScalingMatrixID = glGetUniformLocation(shaderProgramID, "Scaling_Matrix");
 	SideRotateMatrixID = glGetUniformLocation(shaderProgramID, "SideRotate_Matrix");
+	PyramidPXMatrixID = glGetUniformLocation(shaderProgramID, "PyramidPX_Matrix");
+	PyramidMXMatrixID = glGetUniformLocation(shaderProgramID, "PyramidMX_Matrix");
+	PyramidPZMatrixID = glGetUniformLocation(shaderProgramID, "PyramidPZ_Matrix");
+	PyramidMZMatrixID = glGetUniformLocation(shaderProgramID, "PyramidMZ_Matrix");
+	PyramidSeqIndexID = glGetUniformLocation(shaderProgramID, "Current_Pyramid_SeqIndex");
 
 	glUniformMatrix4fv(PerspectiveMatrixID, 1, GL_FALSE, &Perspective_Matrix[0][0]);
 	glUniformMatrix4fv(DoorTransMatrixID, 1, GL_FALSE, &DoorTrans_Matrix[0][0]);
 	glUniformMatrix4fv(ScalingMatrixID, 1, GL_FALSE, &Scaling_Matrix[0][0]);
 	glUniformMatrix4fv(SideRotateMatrixID, 1, GL_FALSE, &SideRotate_Matrix[0][0]);
+	glUniformMatrix4fv(PyramidPXMatrixID, 1, GL_FALSE, &PyramidPX_Matrix[0][0]);
+	glUniformMatrix4fv(PyramidMXMatrixID, 1, GL_FALSE, &PyramidMX_Matrix[0][0]);
+	glUniformMatrix4fv(PyramidPZMatrixID, 1, GL_FALSE, &PyramidPZ_Matrix[0][0]);
+	glUniformMatrix4fv(PyramidMZMatrixID, 1, GL_FALSE, &PyramidMZ_Matrix[0][0]);
 	glUniform1f(Shape_RangeID, Shape_Range);
+	glUniform1i(PyramidSeqIndexID, Current_Pyramid_SeqIndex);
 	if (is_Traslate_Mode) glUniformMatrix4fv(ComTransMatrixID, 1, GL_FALSE, &ComTransMatrix[0][0]);
 	else glUniformMatrix4fv(ComTransMatrixID, 1, GL_FALSE, &UnitMatrix[0][0]);
-
-
 }
