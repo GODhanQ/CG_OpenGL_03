@@ -15,15 +15,15 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CG_OpenGL_03_Shader16.cpp">
+    <ClCompile Include="CG_OpenGL_03_Shader17.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="VarANDFunc_03_Shader16.cpp">
+    <ClCompile Include="VarANDFunc_03_Shader17.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="VarANDFunc_03_Shader16.h">
+    <ClInclude Include="VarANDFunc_03_Shader17.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
