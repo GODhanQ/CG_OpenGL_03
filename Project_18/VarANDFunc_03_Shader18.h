@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <gl/GLU.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
@@ -20,8 +21,10 @@
 #include <windows.h>
 
 namespace Figure_Type {
+	const int AXIS = -1;
 	const int CUBE = 0;
 	const int PYRAMID = 1;
+	const int SPHERE = 2;
 }
 
 struct Vertex_glm {
@@ -79,10 +82,12 @@ extern GLuint shaderProgramID, vertexShader, fragmentShader;
 extern GLuint VBO_axis, VAO_axis, IBO_axis;
 extern GLuint VBO, VAO, IBO;
 
-extern GLuint PerspectiveMatrixID, FigureTypeID, ComTransMatrixID, PlaneNumberID;
+extern GLuint PerspectiveMatrixID, FigureTypeID, TranslationCubeMatrixID, TranslationPyramidMatrixID;
 extern GLuint Shape_RangeID, DoorTransMatrixID, ScalingMatrixID, SideRotateMatrixID;
 extern GLuint PyramidPXMatrixID, PyramidMXMatrixID, PyramidPZMatrixID, PyramidMZMatrixID, PyramidSeqIndexID;
-extern GLuint TranslationCubeMatrixID, TranslationPyramidMatrixID;
+extern GLuint TranslationSphereMatrixID, SphereColorID;
+
+extern GLUquadricObj* qobj;
 
 extern float Shape_Range;
 extern float DoorMaxAngle, Door_ProgressChangeAmount;
@@ -114,14 +119,11 @@ void UPDATE_BUFFER();
 char* filetobuf(const char* file);
 GLuint make_shaderProgram(const char* vertPath, const char* fragPath);
 
-void MakePerspactiveMatrix();
-void MakeComTransMatrix();
+void MakeStaticMatrix();
+void MakeDynamicMatrix();
 
 void SetupVertices();
 void SetupCube();
 void SetupPyramid();
-void DisableAll();
-void EnableAll();
-void EnableAll(int figure_type);
 
 void ComposeUniformVar();

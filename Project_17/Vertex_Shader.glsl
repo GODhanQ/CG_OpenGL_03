@@ -8,6 +8,7 @@ uniform mat4 ComTransMatrix, Perspective_Matrix, DoorTrans_Matrix;
 uniform mat4 Scaling_Matrix, SideRotate_Matrix;
 uniform mat4 PyramidPX_Matrix, PyramidMX_Matrix, PyramidPZ_Matrix, PyramidMZ_Matrix;
 
+uniform mat4 TranslationCube_Matrix, TranslationPyramid_Matrix;
 
 out vec3 out_color;
 
@@ -72,6 +73,13 @@ void main()
         }
 
         aPos = ComTransMatrix * aPos;
+    }
+
+    // Test for Project_18
+    if (Figure_Type == 0) {// Cube
+        aPos = TranslationCube_Matrix * aPos;
+    } else if (Figure_Type == 1) {// Pyramid
+        aPos = TranslationPyramid_Matrix * aPos;
     }
 
     gl_Position = Perspective_Matrix * aPos;

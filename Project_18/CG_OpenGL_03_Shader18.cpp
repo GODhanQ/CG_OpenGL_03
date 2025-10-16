@@ -1,16 +1,12 @@
 #define _CRT_SECURE_NO_WARNINGS
-#include "VarANDFunc_03_Shader17.h"
+#include "VarANDFunc_03_Shader18.h"
 
 auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 std::default_random_engine dre(seed);
 std::uniform_real_distribution<float> urd_0_1(0.0f, 1.0f);
-std::uniform_int_distribution<int> uid_1_6(1, 6);
-std::uniform_int_distribution<int> uid_7_10(7, 10);
 
-glm::mat4 Perspective_Matrix(1.0f), ComTransMatrix(1.0f), UnitMatrix(1.0f);
-glm::mat4 DoorTrans_Matrix(1.0f), Scaling_Matrix(1.0f), SideRotate_Matrix(1.0f);
-glm::mat4 PyramidPX_Matrix(1.0f), PyramidMX_Matrix(1.0f), PyramidPZ_Matrix(1.0f), PyramidMZ_Matrix(1.0f);
-glm::mat4 TranslationCube_Matrix(1.0f), TranslationPyramid_Matrix(1.0f);
+glm::mat4 Perspective_Matrix(1.0f), TranslationCube_Matrix(1.0f), TranslationPyramid_Matrix(1.0f), TranslationSphere_Matrix(1.0f);
+glm::vec3 Sphere_Color;
 
 PlaneManager plane_manager;
 std::vector<Vertex_glm> all_vertices;
@@ -21,7 +17,7 @@ int main(int argc, char** argv)
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
 	glutInitWindowPosition(500, 50);
 	glutInitWindowSize(Window_width, Window_height);
-	glutCreateWindow("Example17");
+	glutCreateWindow("Example18");
 
 	glewExperimental = GL_TRUE;
 	GLenum err = glewInit();
@@ -32,6 +28,9 @@ int main(int argc, char** argv)
 	}
 	std::cout << "glew initialized\n";
 
+	qobj = gluNewQuadric();
+	gluQuadricDrawStyle(qobj, GLU_LINE);
+
 	shaderProgramID = make_shaderProgram("Vertex_Shader.glsl", "Fragment_Shader.glsl");
 	std::cout << "Make Shader Program Completed\n";
 
@@ -41,8 +40,9 @@ int main(int argc, char** argv)
 	glEnable(GL_DEPTH_TEST);
 	std::cout << "Setup GL_CULL_FACE Completed\n";
 
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
 	INIT_BUFFER();
-	EnableAll(Figure_Type::CUBE);
 	std::cout << "INIT BUFFER Completed\n";
 
 	std::cout << "Translate Mode : " << (is_Traslate_Mode ? "On" : "Off") << std::endl;
@@ -61,13 +61,7 @@ GLvoid drawScene() {
 	glClearColor(rColor, gColor, bColor, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	if (Cube_Mode) {
-		EnableAll(Figure_Type::CUBE);
-	} else {
-		EnableAll(Figure_Type::PYRAMID);
-	}
-
-	MakeComTransMatrix();
+	MakeDynamicMatrix();
 	plane_manager.PrepareBuffer();
 
 	glUseProgram(shaderProgramID);
@@ -76,18 +70,16 @@ GLvoid drawScene() {
 
 	// Draw Axis
 	glBindVertexArray(VAO_axis);
-	glUniform1i(FigureTypeID, 2);
+	glUniform1i(FigureTypeID, Figure_Type::AXIS);
 	glLineWidth(1.0f);
 	glDrawElements(GL_LINES, Axis_Index.size(), GL_UNSIGNED_INT, 0);
 
 	// Draw Planes
 	glBindVertexArray(VAO);
-	glLineWidth(3.0f);
 	size_t offset = 0;
 	for (size_t i = 0; i < plane_manager.planes.size(); ++i) {
 		if (plane_manager.planes[i].isSet) {
 			glUniform1i(FigureTypeID, plane_manager.planes[i].Figure_Type);
-			glUniform1i(PlaneNumberID, i);
 
 			if (plane_manager.planes[i].indices.size() == 6)
 				glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * offset));
@@ -99,6 +91,10 @@ GLvoid drawScene() {
 		offset += plane_manager.planes[i].indices.size();
 	}
 
+	// Draw GLU Objects
+	glUniform1i(FigureTypeID, Figure_Type::SPHERE);
+	gluSphere(qobj, 0.5, 10, 10);
+
 	glBindVertexArray(0);
 
 	glutSwapBuffers();
@@ -109,125 +105,9 @@ GLvoid Reshape(int w, int h) {
 
 void KeyBoard(unsigned char key, int x, int y) {
 	switch (key) {
-	// Cube commands
-	case 't':
-	case 'T':
-	// rotate as Z axis
-		if (Rotate_Amount.z > 0) Rotate_Amount.z = 0;
-		else Rotate_Amount.z = 0.5f;
-
-		std::cout << "Spin Z, Spin Amount : " << Rotate_Amount.z << std::endl;
-		glutPostRedisplay();
-		break;
-	case 'f':
-	case 'F':
-		// Open/Close the Cube's +Z axis plane (door)
-		is_DoorAnimating = !is_DoorAnimating;
-		
-		std::cout << "Door Animation : " << (is_DoorAnimating ? "On" : "Off") << std::endl;
-		glutPostRedisplay();
-		break;
 	case 's':
-	case 'S':
-	// Rotate plane located at -+X axis
-		is_SideRotateAnimating = !is_SideRotateAnimating;
-		if (SideRotate_Amount > 0) SideRotate_Amount = 0;
-		else SideRotate_Amount = 0.5f;
-
-		std::cout << "Side Plane Rotate Animation : " << (is_SideRotateAnimating ? "On" : "Off") << std::endl;
-		glutPostRedisplay();
-		break;
-	case 'b':
-	case 'B':
-	// Scaling up/down the Cube's -Z axis plane
-		is_ScalingAnimating = !is_ScalingAnimating;
-
-		std::cout << "Scaling Animation : " << (is_ScalingAnimating ? "On" : "Off") << std::endl;
-		glutPostRedisplay();
-		break;
-
-	// Pyramid commands
-	case 'o':
-	case 'O':
-	// Open/Close the Pyramids's side planes at once
-		if (is_PyramidSeqAnimating) is_PyramidSeqAnimating = false;
-		is_PyramidAllAnimating = !is_PyramidAllAnimating;
-		Current_Pyramid_SeqIndex = 0;
-		
-		std::cout << "Pyramid All Plane Animation : " << (is_PyramidAllAnimating ? "On" : "Off") << std::endl;
-		glutPostRedisplay();
-		break;
-	case 'r':
-	case 'R':
-	// Open/Close the Pyramids's side planes in order
-		if (is_PyramidAllAnimating) is_PyramidAllAnimating = false;
-		is_PyramidSeqAnimating = !is_PyramidSeqAnimating;
-		Current_Pyramid_SeqIndex = 1;
-
-		std::cout << "Pyramid All Plane Animation : " << (is_PyramidAllAnimating ? "On" : "Off") << std::endl;
-		glutPostRedisplay();
-		break;
-	// Unified Command
-	case 'y':
-	case 'Y':
-		// rotate -Y axis
-		if (Rotate_Amount.y > 0) Rotate_Amount.y = 0;
-		else Rotate_Amount.y = 0.5f;
-
-		std::cout << "Spin Y, Spin Amount : " << Rotate_Amount.y << std::endl;
-		glutPostRedisplay();
-		break;
-	case 'c':
-		Transform = glm::vec3(0.0f, 0.0f, 0.0f);
-		Rotation_Angles = glm::vec3(0.0f, 0.0f, 0.0f);
-		Rotate_Amount = glm::vec3(0.0f, 0.0f, 0.0f);
-		Trans_Amount = glm::vec3(0.0f, 0.0f, 0.0f);
-		ComTransMatrix = glm::mat4(1.0f);
-
-		Cube_Mode = true;
-
-		is_DoorAnimating = false; is_ScalingAnimating = false; is_SideRotateAnimating = false;
-		is_PyramidAllAnimating = false; is_PyramidSeqAnimating = false;
-
-		std::cout << "Reset Transformations\n";
-		std::cout << "Enable Cube Planes\n";
 		INIT_BUFFER();
 		glutPostRedisplay();
-		break;
-	case 'p':
-		Cube_Mode = !Cube_Mode;
-
-		std::cout << "Curent Figure : " << (Cube_Mode ? "Cube" : "Pyramid") << std::endl;
-		break;
-	case 'u':
-		// on/off back face culling
-		if (glIsEnabled(GL_CULL_FACE)) {
-			glDisable(GL_CULL_FACE);
-			std::cout << "GL_CULL_FACE Disabled\n";
-		}
-		else {
-			glEnable(GL_CULL_FACE);
-			std::cout << "GL_CULL_FACE Enabled\n";
-		}
-
-		break;
-	case 'h':
-		// on/off depth test
-		if (glIsEnabled(GL_DEPTH_TEST)) {
-			glDisable(GL_DEPTH_TEST);
-			std::cout << "GL_DEPTH_TEST Disabled\n";
-		}
-		else {
-			glEnable(GL_DEPTH_TEST);
-			std::cout << "GL_DEPTH_TEST Enabled\n";
-		}
-
-		break;
-	case 'M':
-	case 'm':
-		is_Traslate_Mode = !is_Traslate_Mode;
-
-		std::cout << "m/M key Translate Mode : " << (is_Traslate_Mode ? "On" : "Off") << std::endl;
 		break;
 	case 'q':
 		exit(0);
@@ -254,7 +134,7 @@ void INIT_BUFFER() {
 	SetupCube();
 	SetupPyramid();
 
-	MakePerspactiveMatrix();
+	MakeStaticMatrix();
 	plane_manager.PrepareBuffer();
 
 	std::cout << "Setup Axis...\n";
@@ -370,95 +250,26 @@ GLuint make_shaderProgram(const char* vertPath, const char* fragPath) {
 	return shaderID;
 }
 
-void MakePerspactiveMatrix() {
+void MakeStaticMatrix() {
 	// showing view is rotated x axis by 30 degree, y axis by 30 degree and z axis by 0 degree
 	Perspective_Matrix = glm::mat4(1.0f);
-
 	Perspective_Matrix = glm::scale(Perspective_Matrix, glm::vec3(0.5f, 0.5f, 0.5f));
 	Perspective_Matrix = glm::rotate(Perspective_Matrix, glm::radians(-30.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 	Perspective_Matrix = glm::rotate(Perspective_Matrix, glm::radians(120.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	Perspective_Matrix = glm::rotate(Perspective_Matrix, glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+
+	TranslationCube_Matrix = glm::mat4(1.0f);
+	TranslationCube_Matrix = glm::translate(TranslationCube_Matrix, glm::vec3(0.0f, 0.0f, -1.5f));
+
+	TranslationPyramid_Matrix = glm::mat4(1.0f);
+	TranslationPyramid_Matrix = glm::translate(TranslationPyramid_Matrix, glm::vec3(0.0f, 0.0f, 1.5f));
+
+	Sphere_Color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
+	TranslationSphere_Matrix = glm::mat4(1.0f);
+	TranslationSphere_Matrix = glm::translate(TranslationSphere_Matrix, glm::vec3(1.5f, 0.0f, 0.0f));
 }
-void MakeComTransMatrix() {
-	Transform += Trans_Amount;
-	Rotation_Angles += Rotate_Amount;
+void MakeDynamicMatrix() {
 
-	if (Rotation_Angles.x >= 360.0f) Rotation_Angles.x -= 360.0f;
-	if (Rotation_Angles.y >= 360.0f) Rotation_Angles.y -= 360.0f;
-	if (Rotation_Angles.z >= 360.0f) Rotation_Angles.z -= 360.0f;
-
-	glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), Transform);
-
-	glm::mat4 rotationMatrix = glm::mat4(1.0f);
-	rotationMatrix = glm::rotate(rotationMatrix, glm::radians(Rotation_Angles.x), glm::vec3(1.0f, 0.0f, 0.0f));
-	rotationMatrix = glm::rotate(rotationMatrix, glm::radians(Rotation_Angles.y), glm::vec3(0.0f, 1.0f, 0.0f));
-	if (Cube_Mode) rotationMatrix = glm::rotate(rotationMatrix, glm::radians(Rotation_Angles.z), glm::vec3(0.0f, 0.0f, 1.0f));
-
-	ComTransMatrix = translationMatrix * rotationMatrix;
-
-	if (is_DoorAnimating) {
-		float elapsedTime = glutGet(GLUT_ELAPSED_TIME);
-		float normalizedSin = (sin(elapsedTime * Door_ProgressChangeAmount) + 1.0f) / 2.0f;
-		float angle = glm::radians(normalizedSin * DoorMaxAngle);
-
-		DoorTrans_Matrix = glm::rotate(glm::mat4(1.0f), -angle, glm::vec3(1.0f, 0.0f, 0.0f));
-	} else {
-		DoorTrans_Matrix = glm::mat4(1.0f);
-	}
-
-	if (is_ScalingAnimating) {
-		float elapsedTime = glutGet(GLUT_ELAPSED_TIME);
-		float normalizedSin = (sin(elapsedTime * Scaling_ProgressChangeAmount) + 1.0f) / 2.0f;
-		float scale = 1.0f + normalizedSin * (MaxScale - 1.0f);
-		scale = scale / 3.0f;
-
-		Scaling_Matrix = glm::scale(glm::mat4(1.0f), glm::vec3(scale, scale, 1.0f));
-	}
-	else {
-		Scaling_Matrix = glm::mat4(1.0f);
-	}
-
-	if (is_SideRotateAnimating) {
-		SideRotate_Angle += SideRotate_Amount;
-		if (SideRotate_Angle >= 360.0f) SideRotate_Angle -= 360.0f;
-		SideRotate_Matrix = glm::rotate(glm::mat4(1.0f), glm::radians(SideRotate_Angle), glm::vec3(1.0f, 0.0f, 0.0f));
-	}
-	else {
-		SideRotate_Matrix = glm::mat4(1.0f);
-	}
-
-	if (is_PyramidAllAnimating || is_PyramidSeqAnimating) {
-		float elapsedTime = glutGet(GLUT_ELAPSED_TIME);
-		float normalizedSin = (sin(elapsedTime * Pyramid_Door_ProgressChangeAmount) + 1.0f) / 2.0f;
-		float temp_MaxAngle = Pyramid_DoorMaxAngle;
-		if (is_PyramidSeqAnimating) temp_MaxAngle = temp_MaxAngle / 2.0f;
-		float angle = glm::radians(normalizedSin * temp_MaxAngle);
-
-		if (is_PyramidSeqAnimating && angle < glm::radians(0.001f) && prevPyramidAngle > angle) {
-			std::cout << "Current Pyramid Seq Index : " << Current_Pyramid_SeqIndex++ << std::endl;
-			if (Current_Pyramid_SeqIndex > 4) {
-				Current_Pyramid_SeqIndex = 1;
-			}
-			prevPyramidAngle = 0.0f;
-		}
-		else {
-			prevPyramidAngle = angle;
-		}
-
-		PyramidPX_Matrix = glm::rotate(glm::mat4(1.0f), -angle, glm::vec3(0.0f, 0.0f, 1.0f));
-		PyramidMX_Matrix = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0.0f, 0.0f, 1.0f));
-		PyramidPZ_Matrix = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(1.0f, 0.0f, 0.0f));
-		PyramidMZ_Matrix = glm::rotate(glm::mat4(1.0f), -angle, glm::vec3(1.0f, 0.0f, 0.0f));
-	}
-	else {
-		PyramidPX_Matrix = glm::mat4(1.0f);
-		PyramidMX_Matrix = glm::mat4(1.0f);
-		PyramidPZ_Matrix = glm::mat4(1.0f);
-		PyramidMZ_Matrix = glm::mat4(1.0f);
-	}
-
-	TranslationCube_Matrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -1.5f));
-	TranslationPyramid_Matrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 1.5f));
 }
 
 void SetupVertices() {
@@ -539,64 +350,25 @@ void SetupPyramid() {
 	bottom_plane.Enable();
 	plane_manager.planes.push_back(bottom_plane);
 }
-void DisableAll() {
-	for (auto& plane : plane_manager.planes) {
-		plane.Disable();
-	}
-}
-void EnableAll() {
-	for (auto& plane : plane_manager.planes) {
-		plane.Enable();
-	}
-}
-void EnableAll(int figure_type) {
-	DisableAll();
-	for (auto& plane : plane_manager.planes) {
-		if (plane.Figure_Type == figure_type) {
-			plane.Enable();
-		}
-		else {
-			plane.Disable();
-		}
-	}
-}
 
 void ComposeUniformVar() {
-	PerspectiveMatrixID = glGetUniformLocation(shaderProgramID, "Perspective_Matrix");
 	FigureTypeID = glGetUniformLocation(shaderProgramID, "Figure_Type");
-	ComTransMatrixID = glGetUniformLocation(shaderProgramID, "ComTransMatrix");
-	PlaneNumberID = glGetUniformLocation(shaderProgramID, "Plane_Number");
-	Shape_RangeID = glGetUniformLocation(shaderProgramID, "Shape_Range");
-	DoorTransMatrixID = glGetUniformLocation(shaderProgramID, "DoorTrans_Matrix");
-	ScalingMatrixID = glGetUniformLocation(shaderProgramID, "Scaling_Matrix");
-	SideRotateMatrixID = glGetUniformLocation(shaderProgramID, "SideRotate_Matrix");
-	PyramidPXMatrixID = glGetUniformLocation(shaderProgramID, "PyramidPX_Matrix");
-	PyramidMXMatrixID = glGetUniformLocation(shaderProgramID, "PyramidMX_Matrix");
-	PyramidPZMatrixID = glGetUniformLocation(shaderProgramID, "PyramidPZ_Matrix");
-	PyramidMZMatrixID = glGetUniformLocation(shaderProgramID, "PyramidMZ_Matrix");
-	PyramidSeqIndexID = glGetUniformLocation(shaderProgramID, "Current_Pyramid_SeqIndex");
+	PerspectiveMatrixID = glGetUniformLocation(shaderProgramID, "Perspective_Matrix");
 	TranslationCubeMatrixID = glGetUniformLocation(shaderProgramID, "TranslationCube_Matrix");
 	TranslationPyramidMatrixID = glGetUniformLocation(shaderProgramID, "TranslationPyramid_Matrix");
+	TranslationSphereMatrixID = glGetUniformLocation(shaderProgramID, "TranslationSphere_Matrix");
+	SphereColorID = glGetUniformLocation(shaderProgramID, "Sphere_Color");
 
 	glUniformMatrix4fv(PerspectiveMatrixID, 1, GL_FALSE, &Perspective_Matrix[0][0]);
-	glUniformMatrix4fv(DoorTransMatrixID, 1, GL_FALSE, &DoorTrans_Matrix[0][0]);
-	glUniformMatrix4fv(ScalingMatrixID, 1, GL_FALSE, &Scaling_Matrix[0][0]);
-	glUniformMatrix4fv(SideRotateMatrixID, 1, GL_FALSE, &SideRotate_Matrix[0][0]);
-	glUniformMatrix4fv(PyramidPXMatrixID, 1, GL_FALSE, &PyramidPX_Matrix[0][0]);
-	glUniformMatrix4fv(PyramidMXMatrixID, 1, GL_FALSE, &PyramidMX_Matrix[0][0]);
-	glUniformMatrix4fv(PyramidPZMatrixID, 1, GL_FALSE, &PyramidPZ_Matrix[0][0]);
-	glUniformMatrix4fv(PyramidMZMatrixID, 1, GL_FALSE, &PyramidMZ_Matrix[0][0]);
 	glUniformMatrix4fv(TranslationCubeMatrixID, 1, GL_FALSE, &TranslationCube_Matrix[0][0]);
 	glUniformMatrix4fv(TranslationPyramidMatrixID, 1, GL_FALSE, &TranslationPyramid_Matrix[0][0]);
-	glUniform1f(Shape_RangeID, Shape_Range);
-	glUniform1i(PyramidSeqIndexID, Current_Pyramid_SeqIndex);
-	if (is_Traslate_Mode) glUniformMatrix4fv(ComTransMatrixID, 1, GL_FALSE, &ComTransMatrix[0][0]);
-	else glUniformMatrix4fv(ComTransMatrixID, 1, GL_FALSE, &UnitMatrix[0][0]);
+	glUniformMatrix4fv(TranslationSphereMatrixID, 1, GL_FALSE, &TranslationSphere_Matrix[0][0]);
+	glUniform3f(SphereColorID, Sphere_Color.x, Sphere_Color.y, Sphere_Color.z);
 
-	if (TranslationCubeMatrixID == -1) {
-		std::cout << "Error: Invalid Cube MatrixID.\n";
-	}
-	if (TranslationPyramidMatrixID == -1) {
-		std::cout << "Error: Invalid Pyramid MatrixID.\n";
-	}
+	if (FigureTypeID == -1) std::cout << "FigureTypeID is not valid.\n";
+	if (PerspectiveMatrixID == -1) std::cout << "PerspectiveMatrixID is not valid.\n";
+	if (TranslationCubeMatrixID == -1) std::cout << "TranslationCubeMatrixID is not valid.\n";
+	if (TranslationPyramidMatrixID == -1) std::cout << "TranslationPyramidMatrixID is not valid.\n";
+	if (TranslationSphereMatrixID == -1) std::cout << "TranslationSphereMatrixID is not valid.\n";
+	if (SphereColorID == -1) std::cout << "SphereColorID is not valid.\n";
 }

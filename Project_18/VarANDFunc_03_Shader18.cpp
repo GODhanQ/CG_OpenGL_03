@@ -1,4 +1,4 @@
-#include "VarANDFunc_03_Shader17.h"
+#include "VarANDFunc_03_Shader18.h"
 
 GLint Window_width{ 800 }, Window_height{ 800 };
 
@@ -7,10 +7,12 @@ GLuint shaderProgramID{}, vertexShader{}, fragmentShader{};
 GLuint VBO_axis{}, VAO_axis{}, IBO_axis{};
 GLuint VBO{}, VAO{}, IBO{};
 
-GLuint PerspectiveMatrixID{}, FigureTypeID{}, ComTransMatrixID{}, PlaneNumberID{};
+GLuint PerspectiveMatrixID{}, FigureTypeID{}, ComTransMatrixID{}, TranslationCubeMatrixID{}, TranslationPyramidMatrixID{};
 GLuint Shape_RangeID{}, DoorTransMatrixID{}, ScalingMatrixID, SideRotateMatrixID{};
 GLuint PyramidPXMatrixID{}, PyramidMXMatrixID{}, PyramidPZMatrixID{}, PyramidMZMatrixID{}, PyramidSeqIndexID{};
-GLuint TranslationCubeMatrixID{}, TranslationPyramidMatrixID{};
+GLuint TranslationSphereMatrixID{}, SphereColorID{};
+
+GLUquadricObj* qobj;
 
 float Shape_Range{ 0.3f };
 float DoorMaxAngle{ 120.0f }, Door_ProgressChangeAmount{ 0.002f };
