@@ -4,8 +4,11 @@
 auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 std::default_random_engine dre(seed);
 std::uniform_real_distribution<float> urd_0_1(0.0f, 1.0f);
+std::uniform_int_distribution<int> uid_0_3(0, 3);
 
 glm::mat4 Perspective_Matrix(1.0f), TranslationCube_Matrix(1.0f), TranslationPyramid_Matrix(1.0f), TranslationSphere_Matrix(1.0f);
+glm::mat4 Rotation_Matrix(1.0f), Revolution_Matrix(1.0f), Scaling_Matrix(1.0f), Translation_Matrix(1.0f);
+
 glm::vec3 Sphere_Color;
 
 PlaneManager plane_manager;
@@ -36,7 +39,7 @@ int main(int argc, char** argv)
 
 	glFrontFace(GL_CCW);
 	glCullFace(GL_BACK);
-	//glEnable(GL_CULL_FACE);
+	glEnable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 	std::cout << "Setup GL_CULL_FACE Completed\n";
 
@@ -44,8 +47,6 @@ int main(int argc, char** argv)
 
 	INIT_BUFFER();
 	std::cout << "INIT BUFFER Completed\n";
-
-	std::cout << "Translate Mode : " << (is_Traslate_Mode ? "On" : "Off") << std::endl;
 
 	glutDisplayFunc(drawScene);
 	glutReshapeFunc(Reshape);
@@ -105,7 +106,119 @@ GLvoid Reshape(int w, int h) {
 
 void KeyBoard(unsigned char key, int x, int y) {
 	switch (key) {
+	case '1':
+		Applicate_to = 0;
+		std::cout << "Applicate_to : First Figure\n";
+		break;
+	case '2':
+		Applicate_to = 1;
+		std::cout << "Applicate_to : Second Figure\n";
+		break;
+	case '3':
+		Applicate_to = 2;
+		std::cout << "Applicate_to : All Figures\n";
+		break;
+
+
+	case 'x':
+		Rotation_Mode = true;
+		if (Rotate_Amount.x < 0) Rotate_Amount.x = 0.0f;
+		Rotate_Amount.x += 0.05f;
+
+		std::cout << "+X Rotation Angle: " << Rotate_Amount.x << std::endl;
+		glutPostRedisplay();
+		break;
+	case 'X':
+		Rotation_Mode = true;
+		if (Rotate_Amount.x > 0) Rotate_Amount.x = 0.0f;
+		Rotate_Amount.x -= 0.05f;
+
+		std::cout << "-X Rotation Angle: " << Rotate_Amount.x << std::endl;
+		glutPostRedisplay();
+		break;
+	case 'y':
+		Rotation_Mode = true;
+		if (Rotate_Amount.y < 0) Rotate_Amount.y = 0.0f;
+		Rotate_Amount.y += 0.05f;
+
+		std::cout << "+Y Rotation Angle: " << Rotate_Amount.y << std::endl;
+		glutPostRedisplay();
+		break;
+	case 'Y':
+		Rotation_Mode = true;
+		if (Rotate_Amount.y > 0) Rotate_Amount.y = 0.0f;
+		Rotate_Amount.y -= 0.05f;
+
+		std::cout << "-Y Rotation Angle: " << Rotate_Amount.y << std::endl;
+		glutPostRedisplay();
+		break;
+	case 'r':
+		Revolution_Mode = true;
+		if (Revolution_Amount.y < 0) Revolution_Amount.y = 0.0f;
+		Revolution_Amount.y += 0.05f;
+
+		std::cout << "+Y Revolution Angle: " << Revolution_Amount.y << std::endl;
+		glutPostRedisplay();
+		break;
+	case 'R':
+		Revolution_Mode = true;
+		if (Revolution_Amount.y > 0) Revolution_Amount.y = 0.0f;
+		Revolution_Amount.y -= 0.05f;
+
+		std::cout << "-Y Revolution Angle: " << Revolution_Amount.y << std::endl;
+		glutPostRedisplay();
+		break;
+	case 'b':
+		Scaling_Mode = true;
+		Scale_Factor += Scale_Amount;
+
+		std::cout << "Scaling Up, Scale Factor: " << glm::length(Scale_Factor) << std::endl;
+		glutPostRedisplay();
+		break;
+	case 'B':
+		Scaling_Mode = true;
+		Scale_Factor -= Scale_Amount;
+
+		std::cout << "Scaling Down, Scale Factor: " << glm::length(Scale_Factor) << std::endl;
+		glutPostRedisplay();
+		break;
+	case 'd':
+		Translate_Factor.x += Translate_Amount.x;
+		
+		std::cout << "Translate +X, Translate Factor: " << glm::length(Translate_Factor) << std::endl;
+		glutPostRedisplay();
+		break;
+	case 'D':
+		Translate_Factor.x -= Translate_Amount.x;
+		
+		std::cout << "Translate -X, Translate Factor: " << glm::length(Translate_Factor) << std::endl;
+		glutPostRedisplay();
+		break;
+	case 'e':
+		Translate_Factor.y += Translate_Amount.y;
+
+		std::cout << "Translate +Y, Translate Factor: " << glm::length(Translate_Factor) << std::endl;
+		glutPostRedisplay();
+		break;
+	case 'E':
+		Translate_Factor.y -= Translate_Amount.y;
+
+		std::cout << "Translate -Y, Translate Factor: " << glm::length(Translate_Factor) << std::endl;
+		glutPostRedisplay();
+		break;
+
+	case 'u':
+		if (glIsEnabled(GL_CULL_FACE)) glDisable(GL_CULL_FACE);
+		else glEnable(GL_CULL_FACE);
+
+		std::cout << "Toggle GL_CULL_FACE\n";
+		glutPostRedisplay();
+		break;
 	case 's':
+		Rotation_Mode = false; Revolution_Mode = false; Scaling_Mode = false;
+		Rotate_Amount = glm::vec3(0.0f, 0.0f, 0.0f); Revolution_Amount = glm::vec3(0.0f, 0.0f, 0.0f);
+		Scale_Factor = glm::vec3(1.0f, 1.0f, 1.0f); Translate_Factor = glm::vec3(0.0f, 0.0f, 0.0f);
+
 		INIT_BUFFER();
 		glutPostRedisplay();
 		break;
@@ -269,7 +382,41 @@ void MakeStaticMatrix() {
 	TranslationSphere_Matrix = glm::translate(TranslationSphere_Matrix, glm::vec3(1.5f, 0.0f, 0.0f));
 }
 void MakeDynamicMatrix() {
+	// Rotation
+	Rotation_Angles += Rotate_Amount;
+	if (Rotation_Angles.x >= 360.0f) Rotation_Angles.x -= 360.0f;
+	if (Rotation_Angles.y >= 360.0f) Rotation_Angles.y -= 360.0f;
+	if (Rotation_Angles.z >= 360.0f) Rotation_Angles.z -= 360.0f;
 
+	if (!Rotation_Mode) Rotation_Matrix = glm::mat4(1.0f);
+	else {
+		Rotation_Matrix = glm::mat4(1.0f);
+		Rotation_Matrix = glm::rotate(Rotation_Matrix, glm::radians(Rotation_Angles.x), glm::vec3(1.0f, 0.0f, 0.0f));
+		Rotation_Matrix = glm::rotate(Rotation_Matrix, glm::radians(Rotation_Angles.y), glm::vec3(0.0f, 1.0f, 0.0f));
+	}
+
+	// Revolution
+	Revolution_Angles += Revolution_Amount;
+	if (Revolution_Angles.x >= 360.0f) Revolution_Angles.x -= 360.0f;
+	if (Revolution_Angles.y >= 360.0f) Revolution_Angles.y -= 360.0f;
+	if (Revolution_Angles.z >= 360.0f) Revolution_Angles.z -= 360.0f;
+
+	if (!Revolution_Mode) Revolution_Matrix = glm::mat4(1.0f);
+	else {
+		Revolution_Matrix = glm::mat4(1.0f);
+		Revolution_Matrix = glm::rotate(Revolution_Matrix, glm::radians(Revolution_Angles.y), glm::vec3(0.0f, 1.0f, 0.0f));
+	}
+
+	// Scaling
+	if (!Scaling_Mode) Scaling_Matrix = glm::mat4(1.0f);
+	else {
+		Scaling_Matrix = glm::mat4(1.0f);
+		Scaling_Matrix = glm::scale(Scaling_Matrix, Scale_Factor);
+	}
+
+	// Translating
+	Translation_Matrix = glm::mat4(1.0f);
+	Translation_Matrix = glm::translate(Translation_Matrix, Translate_Factor);
 }
 
 void SetupVertices() {
@@ -358,12 +505,20 @@ void ComposeUniformVar() {
 	TranslationPyramidMatrixID = glGetUniformLocation(shaderProgramID, "TranslationPyramid_Matrix");
 	TranslationSphereMatrixID = glGetUniformLocation(shaderProgramID, "TranslationSphere_Matrix");
 	SphereColorID = glGetUniformLocation(shaderProgramID, "Sphere_Color");
+	RotationMatrixID = glGetUniformLocation(shaderProgramID, "Rotation_Matrix");
+	RevolutionMatrixID = glGetUniformLocation(shaderProgramID, "Revolution_Matrix");
+	ScalingMatrixID = glGetUniformLocation(shaderProgramID, "Scaling_Matrix");
+	TranslationMatrixID = glGetUniformLocation(shaderProgramID, "Translation_Matrix");
 
 	glUniformMatrix4fv(PerspectiveMatrixID, 1, GL_FALSE, &Perspective_Matrix[0][0]);
 	glUniformMatrix4fv(TranslationCubeMatrixID, 1, GL_FALSE, &TranslationCube_Matrix[0][0]);
 	glUniformMatrix4fv(TranslationPyramidMatrixID, 1, GL_FALSE, &TranslationPyramid_Matrix[0][0]);
 	glUniformMatrix4fv(TranslationSphereMatrixID, 1, GL_FALSE, &TranslationSphere_Matrix[0][0]);
 	glUniform3f(SphereColorID, Sphere_Color.x, Sphere_Color.y, Sphere_Color.z);
+	glUniformMatrix4fv(RotationMatrixID, 1, GL_FALSE, &Rotation_Matrix[0][0]);
+	glUniformMatrix4fv(RevolutionMatrixID, 1, GL_FALSE, &Revolution_Matrix[0][0]);
+	glUniformMatrix4fv(ScalingMatrixID, 1, GL_FALSE, &Scaling_Matrix[0][0]);
+	glUniformMatrix4fv(TranslationMatrixID, 1, GL_FALSE, &Translation_Matrix[0][0]);
 
 	if (FigureTypeID == -1) std::cout << "FigureTypeID is not valid.\n";
 	if (PerspectiveMatrixID == -1) std::cout << "PerspectiveMatrixID is not valid.\n";
@@ -371,4 +526,8 @@ void ComposeUniformVar() {
 	if (TranslationPyramidMatrixID == -1) std::cout << "TranslationPyramidMatrixID is not valid.\n";
 	if (TranslationSphereMatrixID == -1) std::cout << "TranslationSphereMatrixID is not valid.\n";
 	if (SphereColorID == -1) std::cout << "SphereColorID is not valid.\n";
+	if (RotationMatrixID == -1) std::cout << "RotationMatrixID is not valid.\n";
+	if (RevolutionMatrixID == -1) std::cout << "RevolutionMatrixID is not valid.\n";
+	if (ScalingMatrixID == -1) std::cout << "ScalingMatrixID is not valid.\n";
+	if (TranslationMatrixID == -1) std::cout << "TranslationMatrixID is not valid.\n";
 }

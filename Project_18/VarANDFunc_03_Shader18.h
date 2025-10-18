@@ -83,28 +83,23 @@ extern GLuint VBO_axis, VAO_axis, IBO_axis;
 extern GLuint VBO, VAO, IBO;
 
 extern GLuint PerspectiveMatrixID, FigureTypeID, TranslationCubeMatrixID, TranslationPyramidMatrixID;
-extern GLuint Shape_RangeID, DoorTransMatrixID, ScalingMatrixID, SideRotateMatrixID;
-extern GLuint PyramidPXMatrixID, PyramidMXMatrixID, PyramidPZMatrixID, PyramidMZMatrixID, PyramidSeqIndexID;
 extern GLuint TranslationSphereMatrixID, SphereColorID;
+extern GLuint RotationMatrixID, RevolutionMatrixID, ScalingMatrixID, TranslationMatrixID;
 
 extern GLUquadricObj* qobj;
 
 extern float Shape_Range;
-extern float DoorMaxAngle, Door_ProgressChangeAmount;
-extern float MaxScale, Scaling_ProgressChangeAmount;
-extern float SideRotate_Angle, SideRotate_Amount;
-extern float Pyramid_DoorMaxAngle, Pyramid_Door_ProgressChangeAmount, prevPyramidAngle;
-extern int Current_Pyramid_SeqIndex;
+// 0 : FIrst Figure, 1 : Second Figure, 2 : All Figures
+extern int Applicate_to;
 
 extern std::vector<Vertex_glm> Axis_Vertex;
 extern std::vector<unsigned int> Axis_Index;
 extern std::vector<glm::vec3> All_Vertices;
 
-extern glm::vec3 Rotation_Angles, Transform, Rotate_Amount, Trans_Amount;
+extern glm::vec3 Rotation_Angles, Rotate_Amount, Revolution_Angles, Revolution_Amount;
+extern glm::vec3 Scale_Factor, Scale_Amount, Translate_Factor, Translate_Amount;
 
-extern bool is_Traslate_Mode, Cube_Mode, is_DoorAnimating;
-extern bool is_ScalingAnimating, is_SideRotateAnimating;
-extern bool is_PyramidSeqAnimating, is_PyramidAllAnimating, is_OneSeqEnd;
+extern bool Rotation_Mode, Revolution_Mode, Scaling_Mode;
 
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);

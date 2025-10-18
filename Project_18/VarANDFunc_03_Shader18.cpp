@@ -8,26 +8,19 @@ GLuint VBO_axis{}, VAO_axis{}, IBO_axis{};
 GLuint VBO{}, VAO{}, IBO{};
 
 GLuint PerspectiveMatrixID{}, FigureTypeID{}, ComTransMatrixID{}, TranslationCubeMatrixID{}, TranslationPyramidMatrixID{};
-GLuint Shape_RangeID{}, DoorTransMatrixID{}, ScalingMatrixID, SideRotateMatrixID{};
-GLuint PyramidPXMatrixID{}, PyramidMXMatrixID{}, PyramidPZMatrixID{}, PyramidMZMatrixID{}, PyramidSeqIndexID{};
 GLuint TranslationSphereMatrixID{}, SphereColorID{};
+GLuint RotationMatrixID{}, RevolutionMatrixID{}, ScalingMatrixID{}, TranslationMatrixID{};
 
 GLUquadricObj* qobj;
 
 float Shape_Range{ 0.3f };
-float DoorMaxAngle{ 120.0f }, Door_ProgressChangeAmount{ 0.002f };
-float MaxScale{ 3.0f }, Scaling_ProgressChangeAmount{ 0.002f };
-float SideRotate_Angle{ 0.0f }, SideRotate_Amount{ 0.0f };
-float Pyramid_DoorMaxAngle{ 180.0f }, Pyramid_Door_ProgressChangeAmount{ 0.002f }, prevPyramidAngle{ 0.0f };
-// 0 : all planes, 1 : +X plane, 2 : -X plane, 3 : +Z plane, 4 : -Z plane, -1 :Invalid
-int Current_Pyramid_SeqIndex{ -1 };
+int Applicate_to{ 2 };
 
-glm::vec3 Rotate_Amount, Trans_Amount;
-glm::vec3 Rotation_Angles{ 0.0f, 0.0f, 0.0f }, Transform{ 0.0f, 0.0f, 0.0f };
+glm::vec3 Rotate_Amount, Rotation_Angles, Revolution_Amount, Revolution_Angles;
+glm::vec3 Scale_Factor(1.0f, 1.0f, 1.0f), Scale_Amount(0.1f, 0.1f, 0.1f);
+glm::vec3 Translate_Factor, Translate_Amount(0.05f, 0.05f, 0.05f);
 
-bool is_Traslate_Mode{ true }, Cube_Mode{ true }, is_DoorAnimating{ false };
-bool is_ScalingAnimating{ false }, is_SideRotateAnimating{ false };
-bool is_PyramidSeqAnimating{ false }, is_PyramidAllAnimating{ false }, is_OneSeqEnd{ false };
+bool Rotation_Mode{ false }, Revolution_Mode{ false }, Scaling_Mode{ false };
 
 std::vector<Vertex_glm> Axis_Vertex = {
 	// Positions					// Colors
