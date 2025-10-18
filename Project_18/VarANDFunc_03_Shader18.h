@@ -82,24 +82,32 @@ extern GLuint shaderProgramID, vertexShader, fragmentShader;
 extern GLuint VBO_axis, VAO_axis, IBO_axis;
 extern GLuint VBO, VAO, IBO;
 
+extern GLuint ApplicateID;
 extern GLuint PerspectiveMatrixID, FigureTypeID, TranslationCubeMatrixID, TranslationPyramidMatrixID;
-extern GLuint TranslationSphereMatrixID, SphereColorID;
+extern GLuint SphereColorID, isGLUID;
 extern GLuint RotationMatrixID, RevolutionMatrixID, ScalingMatrixID, TranslationMatrixID;
+extern GLuint ScalingOriginFMatrixID, ScalingOriginSMatrixID;
+extern GLuint StrangeRevolutionFMatrixID, StrangeRevolutionSMatrixID;
 
-extern GLUquadricObj* qobj;
+extern GLUquadricObj* qobj_s;
+extern GLUquadricObj* qobj_c;
 
-extern float Shape_Range;
+extern float Shape_Range, StrangeRevolutionMaxScale, StrangeRevolutionProgressAmount;
+extern float Base_Range, ConvertLocProgressAmount, SquareMovingProgress, SquareMovingProgressAmount;
 // 0 : FIrst Figure, 1 : Second Figure, 2 : All Figures
-extern int Applicate_to;
+extern int Applicate_to, Display_Figure[], F_phase, S_phase;
 
 extern std::vector<Vertex_glm> Axis_Vertex;
 extern std::vector<unsigned int> Axis_Index;
 extern std::vector<glm::vec3> All_Vertices;
 
 extern glm::vec3 Rotation_Angles, Rotate_Amount, Revolution_Angles, Revolution_Amount;
-extern glm::vec3 Scale_Factor, Scale_Amount, Translate_Factor, Translate_Amount;
+extern glm::vec3 Scale_Factor, Scale_Amount, ScaleOrigin_Factor, ScaleOrigin_Amount;
+extern glm::vec3 Translate_Factor, Translate_Amount;
+extern glm::vec3 SquareMoving_TargetLoc[];
 
-extern bool Rotation_Mode, Revolution_Mode, Scaling_Mode;
+extern bool Rotation_Mode, Revolution_Mode, Scaling_Mode, StrangeRevolution_Mode;
+extern bool ConvertLoc_Mode, SquareMoving_Mode;
 
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);
@@ -122,3 +130,4 @@ void SetupCube();
 void SetupPyramid();
 
 void ComposeUniformVar();
+void ResettingFigures();

@@ -4,10 +4,12 @@
 auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 std::default_random_engine dre(seed);
 std::uniform_real_distribution<float> urd_0_1(0.0f, 1.0f);
-std::uniform_int_distribution<int> uid_0_3(0, 3);
+std::uniform_int_distribution<int> uid_0_3(0, 2);
 
 glm::mat4 Perspective_Matrix(1.0f), TranslationCube_Matrix(1.0f), TranslationPyramid_Matrix(1.0f), TranslationSphere_Matrix(1.0f);
 glm::mat4 Rotation_Matrix(1.0f), Revolution_Matrix(1.0f), Scaling_Matrix(1.0f), Translation_Matrix(1.0f);
+glm::mat4 ScalingOriginF_Matrix(1.0f), ScalingOriginS_Matrix(1.0f);
+glm::mat4 StrangeRevolutionF_Matrix(1.0f), StrangeRevolutionS_Matrix(1.0f);
 
 glm::vec3 Sphere_Color;
 
@@ -31,8 +33,11 @@ int main(int argc, char** argv)
 	}
 	std::cout << "glew initialized\n";
 
-	qobj = gluNewQuadric();
-	gluQuadricDrawStyle(qobj, GLU_LINE);
+	qobj_s = gluNewQuadric();
+	qobj_c = gluNewQuadric();
+	gluQuadricDrawStyle(qobj_s, GLU_LINE);
+	gluQuadricDrawStyle(qobj_c, GLU_LINE);
+
 
 	shaderProgramID = make_shaderProgram("Vertex_Shader.glsl", "Fragment_Shader.glsl");
 	std::cout << "Make Shader Program Completed\n";
@@ -71,6 +76,7 @@ GLvoid drawScene() {
 
 	// Draw Axis
 	glBindVertexArray(VAO_axis);
+	glUniform1d(isGLUID, false);
 	glUniform1i(FigureTypeID, Figure_Type::AXIS);
 	glLineWidth(1.0f);
 	glDrawElements(GL_LINES, Axis_Index.size(), GL_UNSIGNED_INT, 0);
@@ -80,7 +86,15 @@ GLvoid drawScene() {
 	size_t offset = 0;
 	for (size_t i = 0; i < plane_manager.planes.size(); ++i) {
 		if (plane_manager.planes[i].isSet) {
-			glUniform1i(FigureTypeID, plane_manager.planes[i].Figure_Type);
+			int transed_Figure{};
+			if (plane_manager.planes[i].Figure_Type == Display_Figure[0] ||
+				plane_manager.planes[i].Figure_Type == Display_Figure[1]) {
+				if (plane_manager.planes[i].Figure_Type == Display_Figure[0]) transed_Figure = 0;
+				else if (plane_manager.planes[i].Figure_Type == Display_Figure[1]) transed_Figure = 1;
+			}
+
+			glUniform1i(isGLUID, false);
+			glUniform1i(FigureTypeID, transed_Figure);
 
 			if (plane_manager.planes[i].indices.size() == 6)
 				glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * offset));
@@ -93,8 +107,18 @@ GLvoid drawScene() {
 	}
 
 	// Draw GLU Objects
-	glUniform1i(FigureTypeID, Figure_Type::SPHERE);
-	gluSphere(qobj, 0.5, 10, 10);
+	if (Figure_Type::SPHERE == Display_Figure[0] ||
+		Figure_Type::SPHERE == Display_Figure[1]) {
+		int transed_Figure;
+		if (Figure_Type::SPHERE == Display_Figure[0]) transed_Figure = 0;
+		else if (Figure_Type::SPHERE == Display_Figure[1]) transed_Figure = 1;
+
+		glUniform1i(isGLUID, true);
+		glUniform1i(FigureTypeID, transed_Figure);
+		gluSphere(qobj_s, 0.5, 10, 10);
+	}
+
+	// Draw Cylinder
 
 	glBindVertexArray(0);
 
@@ -168,6 +192,20 @@ void KeyBoard(unsigned char key, int x, int y) {
 		std::cout << "-Y Revolution Angle: " << Revolution_Amount.y << std::endl;
 		glutPostRedisplay();
 		break;
+	case 'a':
+		Scaling_Mode = true;
+		ScaleOrigin_Factor += ScaleOrigin_Amount;
+
+		std::cout << "Scaling Origin Up, Scale Origin Factor: " << glm::length(ScaleOrigin_Factor) << std::endl;
+		glutPostRedisplay();
+		break;
+	case 'A':
+		Scaling_Mode = true;
+		ScaleOrigin_Factor -= ScaleOrigin_Amount;
+
+		std::cout << "Scaling Origin Down, Scale Origin Factor: " << glm::length(ScaleOrigin_Factor) << std::endl;
+		glutPostRedisplay();
+		break;
 	case 'b':
 		Scaling_Mode = true;
 		Scale_Factor += Scale_Amount;
@@ -207,6 +245,51 @@ void KeyBoard(unsigned char key, int x, int y) {
 		glutPostRedisplay();
 		break;
 
+	case 'c':
+		Display_Figure[0] = uid_0_3(dre);
+		Display_Figure[1] = uid_0_3(dre);
+		while (Display_Figure[1] == Display_Figure[0])
+			Display_Figure[1] = uid_0_3(dre);
+		ResettingFigures();
+
+		std::cout << "Randomly Change Display_Figure : " << Display_Figure[0] << ", " << Display_Figure[1] << std::endl;
+		glutPostRedisplay();
+		break;
+
+
+	case 't':
+		Applicate_to = 2;
+		ConvertLoc_Mode = !ConvertLoc_Mode;
+		SquareMoving_Mode = false;
+
+		std::cout << "Toggle Convert Location Mode : " << (ConvertLoc_Mode ? "ON" : "OFF") << std::endl;
+		glutPostRedisplay();
+		break;
+	case 'k':
+		Applicate_to = 2;
+		SquareMoving_Mode = !SquareMoving_Mode;
+		ConvertLoc_Mode = false;
+
+		std::cout << "Toggle Square Moving Mode : " << (SquareMoving_Mode ? "ON" : "OFF") << std::endl;
+		glutPostRedisplay();
+		break;
+	case 'v':
+		Applicate_to = 2;
+		StrangeRevolution_Mode = !StrangeRevolution_Mode;
+		if (StrangeRevolution_Mode) {
+			Revolution_Angles = glm::vec3(0.0f, 0.0f, 0.0f);
+			Revolution_Amount.y = 0.03f;
+			Revolution_Mode = true;
+		}
+		else {
+			Revolution_Angles = glm::vec3(0.0f, 0.0f, 0.0f);
+			Revolution_Amount = glm::vec3(0.0f, 0.0f, 0.0f);
+			Revolution_Mode = false;
+		}
+
+		std::cout << "Toggle Strange Revolution Mode : " << (StrangeRevolution_Mode ? "ON" : "OFF") << std::endl;
+		break;
+
 	case 'u':
 		if (glIsEnabled(GL_CULL_FACE)) glDisable(GL_CULL_FACE);
 		else glEnable(GL_CULL_FACE);
@@ -215,9 +298,12 @@ void KeyBoard(unsigned char key, int x, int y) {
 		glutPostRedisplay();
 		break;
 	case 's':
-		Rotation_Mode = false; Revolution_Mode = false; Scaling_Mode = false;
+		Rotation_Mode = false; Revolution_Mode = false; Scaling_Mode = false; StrangeRevolution_Mode = false;
+		ConvertLoc_Mode = false; SquareMoving_Mode = false;
+		Rotation_Angles = glm::vec3(0.0f, 0.0f, 0.0f); Revolution_Angles = glm::vec3(0.0f, 0.0f, 0.0f);
 		Rotate_Amount = glm::vec3(0.0f, 0.0f, 0.0f); Revolution_Amount = glm::vec3(0.0f, 0.0f, 0.0f);
 		Scale_Factor = glm::vec3(1.0f, 1.0f, 1.0f); Translate_Factor = glm::vec3(0.0f, 0.0f, 0.0f);
+		ScaleOrigin_Factor = glm::vec3(1.0f, 1.0f, 1.0f);
 
 		INIT_BUFFER();
 		glutPostRedisplay();
@@ -372,14 +458,12 @@ void MakeStaticMatrix() {
 	Perspective_Matrix = glm::rotate(Perspective_Matrix, glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 
 	TranslationCube_Matrix = glm::mat4(1.0f);
-	TranslationCube_Matrix = glm::translate(TranslationCube_Matrix, glm::vec3(0.0f, 0.0f, -1.5f));
+	TranslationCube_Matrix = glm::translate(TranslationCube_Matrix, glm::vec3(0.0f, 0.0f, -Base_Range));
 
 	TranslationPyramid_Matrix = glm::mat4(1.0f);
-	TranslationPyramid_Matrix = glm::translate(TranslationPyramid_Matrix, glm::vec3(0.0f, 0.0f, 1.5f));
+	TranslationPyramid_Matrix = glm::translate(TranslationPyramid_Matrix, glm::vec3(0.0f, 0.0f, Base_Range));
 
 	Sphere_Color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
-	TranslationSphere_Matrix = glm::mat4(1.0f);
-	TranslationSphere_Matrix = glm::translate(TranslationSphere_Matrix, glm::vec3(1.5f, 0.0f, 0.0f));
 }
 void MakeDynamicMatrix() {
 	// Rotation
@@ -414,9 +498,83 @@ void MakeDynamicMatrix() {
 		Scaling_Matrix = glm::scale(Scaling_Matrix, Scale_Factor);
 	}
 
+	// Scaling around origin
+	if (!Scaling_Mode) {
+		ScalingOriginF_Matrix = glm::mat4(1.0f);
+		ScalingOriginS_Matrix = glm::mat4(1.0f);
+	}
+	else {
+		ScalingOriginF_Matrix = glm::mat4(1.0f);
+		ScalingOriginF_Matrix = glm::scale(ScalingOriginF_Matrix, ScaleOrigin_Factor);
+
+		ScalingOriginS_Matrix = glm::mat4(1.0f);
+		ScalingOriginS_Matrix = glm::scale(ScalingOriginS_Matrix, ScaleOrigin_Factor);
+	}
+
 	// Translating
 	Translation_Matrix = glm::mat4(1.0f);
 	Translation_Matrix = glm::translate(Translation_Matrix, Translate_Factor);
+
+	// Strange Revolution
+	if (StrangeRevolution_Mode) {
+		float elapsedTime = glutGet(GLUT_ELAPSED_TIME);
+		float normalizedSin = (sin(elapsedTime * StrangeRevolutionProgressAmount) + 1.0f) / 2.0f;
+		float scaleF = 1.0f + normalizedSin * (StrangeRevolutionMaxScale - 1.0f);
+		float scaleS = 1.0f + (1.0f - normalizedSin) * (StrangeRevolutionMaxScale - 1.0f);
+
+
+		StrangeRevolutionF_Matrix = glm::mat4(1.0f); StrangeRevolutionS_Matrix = glm::mat4(1.0f);
+		StrangeRevolutionF_Matrix = glm::scale(StrangeRevolutionF_Matrix, glm::vec3(scaleF, scaleF, scaleF));
+		StrangeRevolutionS_Matrix = glm::scale(StrangeRevolutionS_Matrix, glm::vec3(scaleS, scaleS, scaleS));
+	}
+	else {
+		StrangeRevolutionF_Matrix = glm::mat4(1.0f);
+		StrangeRevolutionS_Matrix = glm::mat4(1.0f);
+	}
+
+	// Convert each location
+	if (ConvertLoc_Mode) {
+		glm::vec3 FirstFigure_Loc = glm::vec3(0.0f, 0.0f, -Base_Range);
+		glm::vec3 SecondFigure_Loc = glm::vec3(0.0f, 0.0f, Base_Range);
+		glm::vec3 Move_Vector = SecondFigure_Loc - FirstFigure_Loc;
+		float elapsedTime = glutGet(GLUT_ELAPSED_TIME);
+		float normalizedSin = (sin(elapsedTime * ConvertLocProgressAmount) + 1.0f) / 2.0f;
+		glm::vec3 Current_Offset = Move_Vector * normalizedSin;
+
+		TranslationCube_Matrix = glm::mat4(1.0f);
+		TranslationCube_Matrix = glm::translate(TranslationCube_Matrix, FirstFigure_Loc + Current_Offset);
+		TranslationPyramid_Matrix = glm::mat4(1.0f);
+		TranslationPyramid_Matrix = glm::translate(TranslationPyramid_Matrix, SecondFigure_Loc - Current_Offset);
+	}
+
+	// Square Moving
+	// Move in Rectangle path
+	// Moving Point : (0, 0, Base_Range) -> (0, -Base_Range, 0) -> (0, 0, -Base_Range) -> (0, Base_Range, 0) -> (0, 0, Base_Range) ...
+	else if (SquareMoving_Mode) {
+		SquareMovingProgress += SquareMovingProgressAmount;
+
+		if (SquareMovingProgress >= 1.0f) {
+			SquareMovingProgress = 0.0f;
+			F_phase = (F_phase + 1) % 4;
+			S_phase = (S_phase + 1) % 4;
+		}
+
+		glm::vec3 F_startPos = SquareMoving_TargetLoc[(F_phase + 3) % 4];
+		glm::vec3 F_endPos = SquareMoving_TargetLoc[F_phase];
+		glm::vec3 F_currentPos = glm::mix(F_startPos, F_endPos, SquareMovingProgress);
+		TranslationCube_Matrix = glm::translate(glm::mat4(1.0f), F_currentPos);
+
+		glm::vec3 S_startPos = SquareMoving_TargetLoc[(S_phase + 3) % 4];
+		glm::vec3 S_endPos = SquareMoving_TargetLoc[S_phase];
+		glm::vec3 S_currentPos = glm::mix(S_startPos, S_endPos, SquareMovingProgress);
+		TranslationPyramid_Matrix = glm::translate(glm::mat4(1.0f), S_currentPos);
+	}
+	else {
+		TranslationCube_Matrix = glm::mat4(1.0f);
+		TranslationCube_Matrix = glm::translate(TranslationCube_Matrix, glm::vec3(0.0f, 0.0f, -Base_Range));
+		TranslationPyramid_Matrix = glm::mat4(1.0f);
+		TranslationPyramid_Matrix = glm::translate(TranslationPyramid_Matrix, glm::vec3(0.0f, 0.0f, Base_Range));
+	}
 }
 
 void SetupVertices() {
@@ -503,31 +661,56 @@ void ComposeUniformVar() {
 	PerspectiveMatrixID = glGetUniformLocation(shaderProgramID, "Perspective_Matrix");
 	TranslationCubeMatrixID = glGetUniformLocation(shaderProgramID, "TranslationCube_Matrix");
 	TranslationPyramidMatrixID = glGetUniformLocation(shaderProgramID, "TranslationPyramid_Matrix");
-	TranslationSphereMatrixID = glGetUniformLocation(shaderProgramID, "TranslationSphere_Matrix");
 	SphereColorID = glGetUniformLocation(shaderProgramID, "Sphere_Color");
 	RotationMatrixID = glGetUniformLocation(shaderProgramID, "Rotation_Matrix");
 	RevolutionMatrixID = glGetUniformLocation(shaderProgramID, "Revolution_Matrix");
 	ScalingMatrixID = glGetUniformLocation(shaderProgramID, "Scaling_Matrix");
 	TranslationMatrixID = glGetUniformLocation(shaderProgramID, "Translation_Matrix");
+	isGLUID = glGetUniformLocation(shaderProgramID, "is_GLU");
+	ScalingOriginFMatrixID = glGetUniformLocation(shaderProgramID, "ScalingOriginF_Matrix");
+	ScalingOriginSMatrixID = glGetUniformLocation(shaderProgramID, "ScalingOriginS_Matrix");
+	ApplicateID = glGetUniformLocation(shaderProgramID, "Applicate_to");
+	StrangeRevolutionFMatrixID = glGetUniformLocation(shaderProgramID, "StrangeRevolutionF_Matrix");
+	StrangeRevolutionSMatrixID = glGetUniformLocation(shaderProgramID, "StrangeRevolutionS_Matrix");
 
 	glUniformMatrix4fv(PerspectiveMatrixID, 1, GL_FALSE, &Perspective_Matrix[0][0]);
 	glUniformMatrix4fv(TranslationCubeMatrixID, 1, GL_FALSE, &TranslationCube_Matrix[0][0]);
 	glUniformMatrix4fv(TranslationPyramidMatrixID, 1, GL_FALSE, &TranslationPyramid_Matrix[0][0]);
-	glUniformMatrix4fv(TranslationSphereMatrixID, 1, GL_FALSE, &TranslationSphere_Matrix[0][0]);
 	glUniform3f(SphereColorID, Sphere_Color.x, Sphere_Color.y, Sphere_Color.z);
 	glUniformMatrix4fv(RotationMatrixID, 1, GL_FALSE, &Rotation_Matrix[0][0]);
 	glUniformMatrix4fv(RevolutionMatrixID, 1, GL_FALSE, &Revolution_Matrix[0][0]);
 	glUniformMatrix4fv(ScalingMatrixID, 1, GL_FALSE, &Scaling_Matrix[0][0]);
 	glUniformMatrix4fv(TranslationMatrixID, 1, GL_FALSE, &Translation_Matrix[0][0]);
+	glUniformMatrix4fv(ScalingOriginFMatrixID, 1, GL_FALSE, &ScalingOriginF_Matrix[0][0]);
+	glUniformMatrix4fv(ScalingOriginSMatrixID, 1, GL_FALSE, &ScalingOriginS_Matrix[0][0]);
+	glUniform1i(ApplicateID, Applicate_to);
+	glUniformMatrix4fv(StrangeRevolutionFMatrixID, 1, GL_FALSE, &StrangeRevolutionF_Matrix[0][0]);
+	glUniformMatrix4fv(StrangeRevolutionSMatrixID, 1, GL_FALSE, &StrangeRevolutionS_Matrix[0][0]);
 
 	if (FigureTypeID == -1) std::cout << "FigureTypeID is not valid.\n";
 	if (PerspectiveMatrixID == -1) std::cout << "PerspectiveMatrixID is not valid.\n";
 	if (TranslationCubeMatrixID == -1) std::cout << "TranslationCubeMatrixID is not valid.\n";
 	if (TranslationPyramidMatrixID == -1) std::cout << "TranslationPyramidMatrixID is not valid.\n";
-	if (TranslationSphereMatrixID == -1) std::cout << "TranslationSphereMatrixID is not valid.\n";
 	if (SphereColorID == -1) std::cout << "SphereColorID is not valid.\n";
 	if (RotationMatrixID == -1) std::cout << "RotationMatrixID is not valid.\n";
 	if (RevolutionMatrixID == -1) std::cout << "RevolutionMatrixID is not valid.\n";
 	if (ScalingMatrixID == -1) std::cout << "ScalingMatrixID is not valid.\n";
 	if (TranslationMatrixID == -1) std::cout << "TranslationMatrixID is not valid.\n";
+	if (isGLUID == -1) std::cout << "isGLUID is not valid.\n";
+	if (ScalingOriginFMatrixID == -1) std::cout << "ScalingOriginMatrixID is not valid.\n";
+	if (ScalingOriginSMatrixID == -1) std::cout << "ScalingOriginSMatrixID is not valid.\n";
+	if (ApplicateID == -1) std::cout << "ApplicateID is not valid.\n";
+	if (StrangeRevolutionFMatrixID == -1) std::cout << "StrangeRevolutionFMatrixID is not valid.\n";
+	if (StrangeRevolutionSMatrixID == -1) std::cout << "StrangeRevolutionSMatrixID is not valid.\n";
+}
+void ResettingFigures() {
+	for(auto& plane : plane_manager.planes) {
+		if (plane.Figure_Type == Display_Figure[0] ||
+			plane.Figure_Type == Display_Figure[1]) {
+			plane.Enable();
+		}
+		else {
+			plane.Disable();
+		}
+	}
 }
