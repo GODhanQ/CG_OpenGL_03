@@ -4,7 +4,7 @@
 auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 std::default_random_engine dre(seed);
 std::uniform_real_distribution<float> urd_0_1(0.0f, 1.0f);
-std::uniform_int_distribution<int> uid_0_3(0, 2);
+std::uniform_int_distribution<int> uid_0_3(0, 3);
 
 glm::mat4 Perspective_Matrix(1.0f), TranslationCube_Matrix(1.0f), TranslationPyramid_Matrix(1.0f), TranslationSphere_Matrix(1.0f);
 glm::mat4 Rotation_Matrix(1.0f), Revolution_Matrix(1.0f), Scaling_Matrix(1.0f), Translation_Matrix(1.0f);
@@ -119,6 +119,16 @@ GLvoid drawScene() {
 	}
 
 	// Draw Cylinder
+	if (Figure_Type::CYLINDER == Display_Figure[0] ||
+		Figure_Type::CYLINDER == Display_Figure[1]) {
+		int transed_Figure;
+		if (Figure_Type::CYLINDER == Display_Figure[0]) transed_Figure = 0;
+		else if (Figure_Type::CYLINDER == Display_Figure[1]) transed_Figure = 1;
+
+		glUniform1i(isGLUID, true);
+		glUniform1i(FigureTypeID, transed_Figure);
+		gluCylinder(qobj_c, 0.3, 0.3, 1.0, 20, 10);
+	}
 
 	glBindVertexArray(0);
 

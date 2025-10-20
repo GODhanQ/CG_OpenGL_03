@@ -25,6 +25,7 @@ namespace Figure_Type {
 	const int CUBE = 0;
 	const int PYRAMID = 1;
 	const int SPHERE = 2;
+	const int CYLINDER = 3;
 }
 
 struct Vertex_glm {

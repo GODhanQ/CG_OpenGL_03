@@ -434,7 +434,7 @@ void MakeComTransMatrix() {
 		if (is_PyramidSeqAnimating) temp_MaxAngle = temp_MaxAngle / 2.0f;
 		float angle = glm::radians(normalizedSin * temp_MaxAngle);
 
-		if (is_PyramidSeqAnimating && angle < glm::radians(0.001f) && prevPyramidAngle > angle) {
+		if (is_PyramidSeqAnimating && angle < glm::radians(0.005f) && prevPyramidAngle > angle) {
 			std::cout << "Current Pyramid Seq Index : " << Current_Pyramid_SeqIndex++ << std::endl;
 			if (Current_Pyramid_SeqIndex > 4) {
 				Current_Pyramid_SeqIndex = 1;
