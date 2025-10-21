@@ -35,8 +35,8 @@ int main(int argc, char** argv)
 
 	qobj_s = gluNewQuadric();
 	qobj_c = gluNewQuadric();
-	gluQuadricDrawStyle(qobj_s, GLU_LINE);
-	gluQuadricDrawStyle(qobj_c, GLU_LINE);
+	gluQuadricDrawStyle(qobj_s, GLU_FILL);
+	gluQuadricDrawStyle(qobj_c, GLU_FILL);
 
 
 	shaderProgramID = make_shaderProgram("Vertex_Shader.glsl", "Fragment_Shader.glsl");
@@ -48,7 +48,7 @@ int main(int argc, char** argv)
 	glEnable(GL_DEPTH_TEST);
 	std::cout << "Setup GL_CULL_FACE Completed\n";
 
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	INIT_BUFFER();
 	std::cout << "INIT BUFFER Completed\n";
@@ -113,6 +113,7 @@ GLvoid drawScene() {
 		if (Figure_Type::SPHERE == Display_Figure[0]) transed_Figure = 0;
 		else if (Figure_Type::SPHERE == Display_Figure[1]) transed_Figure = 1;
 
+		Sphere_Color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
 		glUniform1i(isGLUID, true);
 		glUniform1i(FigureTypeID, transed_Figure);
 		gluSphere(qobj_s, 0.5, 10, 10);
@@ -125,6 +126,7 @@ GLvoid drawScene() {
 		if (Figure_Type::CYLINDER == Display_Figure[0]) transed_Figure = 0;
 		else if (Figure_Type::CYLINDER == Display_Figure[1]) transed_Figure = 1;
 
+		Sphere_Color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
 		glUniform1i(isGLUID, true);
 		glUniform1i(FigureTypeID, transed_Figure);
 		gluCylinder(qobj_c, 0.3, 0.3, 1.0, 20, 10);
@@ -472,8 +474,6 @@ void MakeStaticMatrix() {
 
 	TranslationPyramid_Matrix = glm::mat4(1.0f);
 	TranslationPyramid_Matrix = glm::translate(TranslationPyramid_Matrix, glm::vec3(0.0f, 0.0f, Base_Range));
-
-	Sphere_Color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
 }
 void MakeDynamicMatrix() {
 	// Rotation

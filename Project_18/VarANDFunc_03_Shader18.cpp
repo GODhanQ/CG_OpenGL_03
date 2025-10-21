@@ -18,7 +18,7 @@ GLUquadricObj* qobj_s;
 GLUquadricObj* qobj_c;
 
 float Shape_Range{ 0.3f }, StrangeRevolutionMaxScale{ 0.3f }, StrangeRevolutionProgressAmount{ 0.005f };
-float Base_Range{ 1.5f }, ConvertLocProgressAmount{ 0.003f }, SquareMovingProgress{ 0.0f }, SquareMovingProgressAmount{ 0.0003f };
+float Base_Range{ 1.5f }, ConvertLocProgressAmount{ 0.003f }, SquareMovingProgress{ 0.0f }, SquareMovingProgressAmount{ 0.003f };
 int Applicate_to{ 2 }, Display_Figure[] = { 0, 1 }, F_phase{ 2 }, S_phase{};
 
 glm::vec3 Rotate_Amount, Rotation_Angles, Revolution_Amount, Revolution_Angles;
