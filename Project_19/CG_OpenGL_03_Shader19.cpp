@@ -12,6 +12,7 @@ glm::mat4 Sun_ModelMatrix(1.0f);
 glm::mat4 Planet1_ModelMatrix(1.0f), Planet2_ModelMatrix(1.0f), Planet3_ModelMatrix(1.0f);
 glm::mat4 Sat1_ModelMatrix(1.0f), Sat2_ModelMatrix(1.0f), Sat3_ModelMatrix(1.0f);
 glm::mat4 GlobalTransform_Matrix(1.0f);
+glm::mat4 Rotate_Matrix(1.0f);
 
 PlaneManager plane_manager;
 std::vector<Vertex_glm> all_vertices;
@@ -22,7 +23,7 @@ std::vector<ModelData> models;
 
 // OBJ Filenames
 std::vector<std::string> model_filenames = {
-	"Cube_Obj.obj", "Wooden_House.obj", "Anime_Chara.obj", "Planet.obj",
+	"Planet1.obj",
 };
 
 int main(int argc, char** argv)
@@ -54,6 +55,14 @@ int main(int argc, char** argv)
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	INIT_BUFFER();
+	for (const auto& model : model_set) {
+		std::cout << "In model_set - ";
+		std::cout << "Model Name: " << model.name << ", Vertices: " << model.vertices.size() << ", Indices: " << model.indices.size() << std::endl;
+	}
+	for (const auto& model : models) {
+		std::cout << "In models - ";
+		std::cout << "Model Index: " << model.Model_Index << ", Name: " << model.name << ", Vertices: " << model.vertices.size() << ", Indices: " << model.indices.size() << std::endl;
+	}
 	std::cout << "INIT BUFFER Completed\n";
 
 	MakeStaticMatrix();
@@ -88,8 +97,7 @@ GLvoid drawScene() {
 	// Draw Planes
 	glBindVertexArray(VAO);
 
-	// OBJ Draw Planes 
-
+	// OBJ Draw Objects 
 	for (auto const& model : models) {
 		glBindVertexArray(model.vao);
 		glUniform1i(FigureTypeID, Figure_Type::CUSTOM_OBJ);
@@ -176,7 +184,6 @@ void KeyBoard(unsigned char key, int x, int y) {
 		exit(0);
 	}
 }
-
 void MouseClick(int button, int state, int x, int y) {
 
 }
@@ -196,7 +203,7 @@ void INIT_BUFFER() {
 		ModelData model;
 		std::vector<glm::vec3> temp_positions;
 		if (loadOBJ(name.c_str(), temp_positions, model.indices)) {
-			std::cout << name << " 파일 로드 성공!" << std::endl;
+			std::cout << name << " File Load Success!" << std::endl;
 
 			glm::vec3 color{ urd_0_1(dre), urd_0_1(dre), urd_0_1(dre) };
 			model.name = name;
@@ -209,9 +216,6 @@ void INIT_BUFFER() {
 	}
 	PushModels();
 	ModelDivision();
-	for (auto& model : models) {
-		std::cout << "Model Index: " << model.Model_Index << ", Name: " << model.name << ", Vertices: " << model.vertices.size() << ", Indices: " << model.indices.size() << std::endl;
-	}
 
 	SetupVertices();
 
@@ -403,8 +407,13 @@ void MakeDynamicMatrix() {
 
 	// Global Transform
 	GlobalTransform_Matrix = glm::mat4(1.0f);
-	GlobalTransform_Matrix = glm::rotate(GlobalTransform_Matrix, glm::radians(Global_Rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+	//GlobalTransform_Matrix = glm::rotate(GlobalTransform_Matrix, glm::radians(Global_Rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
 	GlobalTransform_Matrix = glm::translate(GlobalTransform_Matrix, Global_Translation);
+
+	// Rotate Matrix
+	Rotate_Matrix = glm::mat4(1.0f);
+	Rotate_Matrix = glm::rotate(Rotate_Matrix, glm::radians(Global_Rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+
 }
 
 void SetupVertices() {
@@ -488,7 +497,7 @@ void SetupPyramid() {
 bool loadOBJ(const char* path, std::vector<glm::vec3>& out_vertices, std::vector<unsigned int>& out_indices) {
 	FILE* file = fopen(path, "r");
 	if (file == NULL) {
-		printf("파일을 열 수 없습니다! 경로를 확인하세요: %s\n", path);
+		printf("Can't Load Files! Check file path: %s\n", path);
 		return false;
 	}
 
@@ -572,7 +581,7 @@ void PushModels() {
 
 	std::cout << "Push Models...\n";
 	for (auto const& model : model_set) {
-		if (model.name == "Planet.obj") {
+		if (model.name == "Planet1.obj") {
 			for (int i = 0; i < 7; ++i) {
 				glm::vec3 color{ urd_0_1(dre), urd_0_1(dre), urd_0_1(dre) };
 				ModelData planet_model = model;
@@ -598,7 +607,6 @@ void PushModels() {
 
 				models.push_back(planet_model);
 				std::cout << "Push Model: " << model.name << std::endl;
-
 			}
 		}
 	}
@@ -615,7 +623,6 @@ void ModelDivision() {
 	}
 }
 
-
 void ComposeUniformVar() {
 	// Static Uniforms
 	ViewTransformMatrixID = glGetUniformLocation(shaderProgramID, "View_Matrix");
@@ -630,6 +637,7 @@ void ComposeUniformVar() {
 	Sat3MatrixID = glGetUniformLocation(shaderProgramID, "Sat3_ModelMatrix");
 	PerspectiveFlagID = glGetUniformLocation(shaderProgramID, "Perspective_Flag");
 	GlobalTransformMatrixID = glGetUniformLocation(shaderProgramID, "GlobalTransform_Matrix");
+	RotateMatrixID = glGetUniformLocation(shaderProgramID, "Rotate_Matrix");
 
 	glUniformMatrix4fv(ViewTransformMatrixID, 1, GL_FALSE, &View_Matrix[0][0]);
 	glUniformMatrix4fv(PerspectiveMatrixID, 1, GL_FALSE, &Perspective_Matrix[0][0]);
@@ -643,6 +651,7 @@ void ComposeUniformVar() {
 	glUniformMatrix4fv(Sat3MatrixID, 1, GL_FALSE, &Sat3_ModelMatrix[0][0]);
 	glUniform1i(PerspectiveFlagID, Perspective_Flag);
 	glUniformMatrix4fv(GlobalTransformMatrixID, 1, GL_FALSE, &GlobalTransform_Matrix[0][0]);
+	glUniformMatrix4fv(RotateMatrixID, 1, GL_FALSE, &Rotate_Matrix[0][0]);
 
 	if (ViewTransformMatrixID == -1) std::cerr << "Could not bind View_Matrix uniform variable." << std::endl;
 	if (PerspectiveMatrixID == -1) std::cerr << "Could not bind Perspective_Matrix uniform variable." << std::endl;
@@ -656,6 +665,7 @@ void ComposeUniformVar() {
 	if (Sat3MatrixID == -1) std::cerr << "Could not bind Sat3_ModelMatrix uniform variable." << std::endl;
 	if (PerspectiveFlagID == -1) std::cerr << "Could not bind Perspective_Flag uniform variable." << std::endl;
 	if (GlobalTransformMatrixID == -1) std::cerr << "Could not bind GlobalTransform_Matrix uniform variable." << std::endl;
+	if (RotateMatrixID == -1) std::cerr << "Could not bind Rotate_Matrix uniform variable." << std::endl;
 	
 	// Dynamic Uniforms
 	FigureTypeID = glGetUniformLocation(shaderProgramID, "Figure_Type");

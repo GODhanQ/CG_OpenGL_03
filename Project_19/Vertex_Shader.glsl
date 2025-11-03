@@ -8,6 +8,7 @@ uniform int Figure_Type, Model_Index;
 uniform mat4 Sun_ModelMatrix, Planet1_ModelMatrix, Planet2_ModelMatrix, Planet3_ModelMatrix;
 uniform mat4 Sat1_ModelMatrix, Sat2_ModelMatrix, Sat3_ModelMatrix;
 uniform mat4 GlobalTransform_Matrix;
+uniform mat4 Rotate_Matrix;
 
 uniform bool Perspective_Flag;
 
@@ -43,6 +44,9 @@ void main()
                 break;
         }
 
+        if (Model_Index != 0) {
+            aPos = Rotate_Matrix * aPos;
+        }
         aPos = GlobalTransform_Matrix * aPos;
     }
     else {

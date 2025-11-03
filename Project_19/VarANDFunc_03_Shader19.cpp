@@ -13,6 +13,7 @@ GLuint SunMatrixID{}, Planet1MatrixID{}, Planet2MatrixID{}, Planet3MatrixID{};
 GLuint Sat1MatrixID{}, Sat2MatrixID{}, Sat3MatrixID{};
 GLuint PerspectiveFlagID{};
 GLuint GlobalTransformMatrixID{};
+GLuint RotateMatrixID{};
 
 float Shape_Range{ 0.3f }, Base_Range{ 1.5f };
 float Sun_scale{ 1.5f }, planet_scale{ 1.0f }, satlite_scale{ 0.3f };

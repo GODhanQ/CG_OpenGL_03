@@ -100,6 +100,7 @@ extern GLuint SunMatrixID, Planet1MatrixID, Planet2MatrixID, Planet3MatrixID;
 extern GLuint Sat1MatrixID, Sat2MatrixID, Sat3MatrixID;
 extern GLuint PerspectiveFlagID;
 extern GLuint GlobalTransformMatrixID;
+extern GLuint RotateMatrixID;
 
 extern float Shape_Range, Base_Range;
 extern float Sun_scale, planet_scale, satlite_scale;
