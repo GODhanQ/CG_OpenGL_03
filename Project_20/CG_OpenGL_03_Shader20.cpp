@@ -50,6 +50,11 @@ int main(int argc, char** argv)
 
 	ComposeUniformVar();
 	std::cout << "Compose Uniform Variable Completed\n";
+	for (const auto& file : g_OBJ_Files) {
+		for (const auto& object : file.objects) {
+			std::cout << "Object Name: " << object.name << ", VAO: " << object.VAO << "\n";
+		}
+	}
 
 	glutDisplayFunc(drawScene);
 	glutReshapeFunc(Reshape);
@@ -521,7 +526,7 @@ void MakeDynamicMatrix() {
 	Neck_Matrix = glm::rotate(Neck_Matrix, glm::radians(Neck_Rotate_Factor.y), glm::vec3(0.0f, 1.0f, 0.0f));
 
 	if (Rotating_Head) {
-		Head_Movement_Factor_Param += 0.0002f;
+		Head_Movement_Factor_Param += 0.002f;
 		if (Head_Movement_Factor_Param > 1.0f)
 			Head_Movement_Factor_Param = 0.0f;
 	}
