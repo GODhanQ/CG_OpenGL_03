@@ -32,6 +32,8 @@ void main()
             aPos = Flag1_Matrix * aPos;
         } else if (Figure_Type == 8) {      // Flag_2
             aPos = Flag2_Matrix * aPos;
+        } else if (Figure_Type == 99 ) {    // ETC
+            
         }
         
         aPos = Model_Matrix * aPos;

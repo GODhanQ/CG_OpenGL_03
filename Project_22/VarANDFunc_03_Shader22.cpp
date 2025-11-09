@@ -1,12 +1,12 @@
 #include "VarANDFunc_03_Shader22.h"
 
-GLint Window_width{ 800 }, Window_height{ 800 };
+GLint Window_width{ 1200 }, Window_height{ 675 };
 
 GLuint shaderProgramID{}, vertexShader{}, fragmentShader{};
 
 GLuint VBO_axis{}, VAO_axis{}, IBO_axis{};
 
-glm::vec3 EYE(15.0, 10.0, 15.0), AT(0.0, 0.0, 0.0), UP(0.0, 1.0, 0.0);
+glm::vec3 EYE(30.0, 20.0, 30.0), AT(0.0, 0.0, 0.0), UP(0.0, 1.0, 0.0);
 GLuint PerspectiveMatrixID{}, ViewMatrixID;
 float Camera_Rotation_Sum{}, Camera_Rotation_Factor{}, Camera_Revolution_Sum{ 0.0f }, Camera_Revolution_Factor{ 0.0f };
 

@@ -32,6 +32,7 @@ namespace Figure_Type {
 	const int MOUTH_2 = 6;
 	const int FLAG_1 = 7;
 	const int FLAG_2 = 8;
+	const int ETC = 99;
 }
 
 struct Vertex_glm {
@@ -94,5 +95,6 @@ bool ReadObj(const std::string& path, OBJ_File& outFile);
 void MakeStaticMatrix();
 void MakeDynamicMatrix();
 
-void ComposeUniformVar();
+void GetUniformLocations();
+void UpdateUniformMatrices();
 void ComposeOBJColor();

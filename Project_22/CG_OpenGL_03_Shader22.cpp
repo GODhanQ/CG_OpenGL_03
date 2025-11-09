@@ -19,7 +19,7 @@ int main(int argc, char** argv)
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
 	glutInitWindowPosition(500, 50);
 	glutInitWindowSize(Window_width, Window_height);
-	glutCreateWindow("Example20");
+	glutCreateWindow("Example22");
 
 	glewExperimental = GL_TRUE;
 	GLenum err = glewInit();
@@ -32,6 +32,9 @@ int main(int argc, char** argv)
 
 	shaderProgramID = make_shaderProgram("Vertex_Shader.glsl", "Fragment_Shader.glsl");
 	std::cout << "Make Shader Program Completed\n";
+
+	GetUniformLocations();
+	std::cout << "Get Uniform Locations Completed\n";
 
 	glFrontFace(GL_CCW);
 	glCullFace(GL_BACK);
@@ -48,8 +51,6 @@ int main(int argc, char** argv)
 	MakeStaticMatrix();
 	std::cout << "Make Static Matrix Completed\n";
 
-	ComposeUniformVar();
-	std::cout << "Compose Uniform Variable Completed\n";
 	for (const auto& file : g_OBJ_Files) {
 		for (const auto& object : file.objects) {
 			std::cout << "Object Name: " << object.name << ", VAO: " << object.VAO << "\n";
@@ -67,172 +68,85 @@ int main(int argc, char** argv)
 }
 
 GLvoid drawScene() {
-	GLfloat rColor{ 0.5f }, gColor{ 0.5f }, bColor{ 0.7f };
+	GLfloat rColor{ 0.5f }, gColor{ 0.5f }, bColor{ 0.5f };
 	glClearColor(rColor, gColor, bColor, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glUseProgram(shaderProgramID);
-	MakeDynamicMatrix();
+	MakeDynamicMatrix(); // ÌòÑÏû¨ Ïπ¥Î©îÎùº ÏÉÅÌÉúÎ°ú ÌñâÎ†¨ Í≥ÑÏÇ∞
 
-	ComposeUniformVar();
+	int width = glutGet(GLUT_WINDOW_WIDTH);
+	int height = glutGet(GLUT_WINDOW_HEIGHT);
 
+	// 1. Main Viewport
+	glViewport(0, 0, width, height);
+	Perspective_Matrix = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
+	View_Matrix = glm::lookAt(EYE, AT, UP);
+	UpdateUniformMatrices();
+
+	// OBJ in Main Viewport
 	// Draw Axis
 	glBindVertexArray(VAO_axis);
 	glUniform1i(FigureTypeID, Figure_Type::AXIS);
 	glLineWidth(2.0f);
 	glDrawElements(GL_LINES, Axis_Index.size(), GL_UNSIGNED_INT, 0);
 
-	// Draw Figures
+	// Draw OBJ Models
 	for (const auto& file : g_OBJ_Files) {
 		for (const auto& object : file.objects) {
 			glBindVertexArray(object.VAO);
-			const int Figure_Type_ID = 
-				(object.name == "Floor") ? Figure_Type::FLOOR :
-				(object.name == "body.001") ? Figure_Type::BODY :
-				(object.name == "neck.001") ? Figure_Type::NECK :
-				(object.name == "head_1.001") ? Figure_Type::HEAD_1 :
-				(object.name == "head_2.001") ? Figure_Type::HEAD_2 :
-				(object.name == "mouth_1.001") ? Figure_Type::MOUTH_1 :
-				(object.name == "mouth_2.001") ? Figure_Type::MOUTH_2 :
-				(object.name == "flag_1.001") ? Figure_Type::FLAG_1 :
-				(object.name == "flag_2.001") ? Figure_Type::FLAG_2 :
-				Figure_Type::IDK;
-
-			glUniform1i(FigureTypeID, Figure_Type_ID);
+			glUniform1i(FigureTypeID, Figure_Type::ETC);
 			glDrawElements(GL_TRIANGLES, object.indices.size(), GL_UNSIGNED_INT, 0);
 		}
 	}
-	
+
+	// 2. Minimap Viewport
+	glClear(GL_DEPTH_BUFFER_BIT);
+	int minimap_size = width / 4;
+	glViewport(width - minimap_size, height - minimap_size, minimap_size, minimap_size);
+
+	// ÎØ∏ÎãàÎßµÏùÑ ÏúÑÌïú Orthographic ProjectionÍ≥º Top-down View ÏÑ§Ï†ï
+	Perspective_Matrix = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, 1.0f, 100.0f);
+	View_Matrix = glm::lookAt(glm::vec3(0.0f, 50.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
+	UpdateUniformMatrices();
+
+	// Re-draw objects in Minimap
+	// Draw Axis
+	glBindVertexArray(VAO_axis);
+	glUniform1i(FigureTypeID, Figure_Type::AXIS);
+	glLineWidth(2.0f);
+	glDrawElements(GL_LINES, Axis_Index.size(), GL_UNSIGNED_INT, 0);
+
+	// Draw OBJ Models
+	for (const auto& file : g_OBJ_Files) {
+		for (const auto& object : file.objects) {
+			glBindVertexArray(object.VAO);
+			glUniform1i(FigureTypeID, Figure_Type::ETC);
+			glDrawElements(GL_TRIANGLES, object.indices.size(), GL_UNSIGNED_INT, 0);
+		}
+	}
 
 	glBindVertexArray(0);
-
 	glutSwapBuffers();
 }
 GLvoid Reshape(int w, int h) {
-	glViewport(0, 0, w * 0.5, h);
-	glViewport(0.5 * w, 0, w, h);
-	//glViewport(0.75 * w, 0, w, 0.25 * h);
+	//glViewport(0, 0, w, h);
+	//glViewport(w * 0.75, h * 0.75, w, h);
 	MakeStaticMatrix();
 	glUniformMatrix4fv(PerspectiveMatrixID, 1, GL_FALSE, &Perspective_Matrix[0][0]);
 }
 
 void KeyBoard(unsigned char key, int x, int y) {
 	switch (key) {
-	// model part rotations
-	case 't':
-		Neck_Rotate_Factor.y += 5.0f;
-		break;
-	case 'T':
-		Neck_Rotate_Factor.y -= 5.0f;
-		break;
-	case 'g':
-		Head_Rotate_Factor.y += 5.0f;
-		break;
-	case 'G':
-		Head_Rotate_Factor.y -= 5.0f;
-		break;
-	case 'p':
-		Flag_Rotate_Factor.x += 5.0f;
-		break;
-	case 'P':
-		Flag_Rotate_Factor.x -= 5.0f;
-		break;
-
-	// camera actions
-	case 'x':
-		EYE.x += 1.0f;
-		AT.x += 1.0f;
-		MakeStaticMatrix();
-		break;
-	case 'X':
-		EYE.x -= 1.0f;
-		AT.x -= 1.0f;
-		MakeStaticMatrix();
-		break;
-	case 'z':
-		EYE.z += 1.0f;
-		AT.z += 1.0f;
-		MakeStaticMatrix();
-		break;
-	case 'Z':
-		EYE.z -= 1.0f;
-		AT.z -= 1.0f;
-		MakeStaticMatrix();
-		break;
-
-	case 'y':
-		// Rotate AT based on EYE
-		// Camera rotation
-		Camera_Rotation_Factor += 0.03f;
-
-		break;
-	case 'Y':
-		// Rotate AT based on EYE, reverse direction
-		// Camera rotation
-		Camera_Rotation_Factor -= 0.03f;
-
-		break;
-	case 'r':
-		// Rotate EYE around AT
-		// Camera revolution
-		Camera_Revolution_Factor += 0.03f;
-
-		break;
-	case 'R':
-		// Rotate EYE around AT, reverse direction
-		// Camera revolution
-		Camera_Revolution_Factor -= 0.03f;
-
-		break;
-
-	case 'l':
-		Rotating_Head = !Rotating_Head;
-
-		std::cout << "Rotating Head: " << (Rotating_Head ? "ON" : "OFF") << std::endl;
-		break;
-
-	case 'c':
-		// reset All
-		Model_Movement_Factor = glm::vec3(0.0f, 0.0f, 0.0f);
-		Neck_Rotate_Factor = glm::vec3(0.0f, 0.0f, 0.0f);
-		Head_Rotate_Factor = glm::vec3(0.0f, 0.0f, 0.0f);
-		Flag_Rotate_Factor = glm::vec3(0.0f, 0.0f, 0.0f);
-		EYE = glm::vec3(15.0, 10.0, 15.0);
-		AT = glm::vec3(0.0, 0.0, 0.0);
-		Camera_Rotation_Sum = 0.0f; Camera_Rotation_Factor = 0.0f;
-		Camera_Revolution_Sum = 0.0f; Camera_Revolution_Factor = 0.0f;
-		Rotating_Head = false;
-		Head_Movement_Factor_Param = 0.0f;
-		MakeStaticMatrix();
-		break;
-	case 'o':
-		// reset Factor
-		Camera_Rotation_Factor = 0.0f;
-		Camera_Revolution_Factor = 0.0f;
-		Rotating_Head = false;
-		break;
-	// exit
+	
 	case 'q':
 		exit(0);
 	}
 }
 void SpecialKeyBoard(int key, int x, int y) {
 	switch (key) {
-	case GLUT_KEY_UP:
-		Model_Movement_Factor.x -= 1.0f;
 
-		break;
-	case GLUT_KEY_DOWN:
-		Model_Movement_Factor.x += 1.0f;
-
-		break;
-	case GLUT_KEY_LEFT:
-		Model_Movement_Factor.z += 1.0f;
-
-		break;
-	case GLUT_KEY_RIGHT:
-		Model_Movement_Factor.z -= 1.0f;
-
+	default:
 		break;
 	}
 }
@@ -251,10 +165,8 @@ std::pair<float, float> ConvertScreenToOpenGL(int screen_x, int screen_y) {
 
 void INIT_BUFFER() {
 	std::vector<std::string> obj_filenames = {
-		"Floor.obj",
-		"body.obj",
-		"neck.obj",
-		"head.obj"
+		"Box.obj",
+		"Robot.obj",
 	};
 
 	for (const auto& filename : obj_filenames) {
@@ -428,7 +340,7 @@ bool ReadObj(const std::string& path, OBJ_File& outFile) {
 		}
 		else if (strcmp(lineHeader, "f") == 0) {
 			if (currentObject == nullptr) {
-				// 'o' ≈¬±◊ æ¯¿Ã 'f'∞° ∏’¿˙ ≥™ø¿¥¬ ∞ÊøÏ∏¶ ¥Î∫Ò«ÿ ±‚∫ª ∞¥√º ª˝º∫
+				// 'o' ÌÉúÍ∑∏ ÏóÜÏù¥ 'f'Í∞Ä Î®ºÏ†Ä ÎÇòÏò§Îäî Í≤ΩÏö∞Î•º ÎåÄÎπÑÌï¥ Í∏∞Î≥∏ Í∞ùÏ≤¥ ÏÉùÏÑ±
 				outFile.objects.emplace_back();
 				currentObject = &outFile.objects.back();
 				currentObject->name = "default_object";
@@ -445,20 +357,20 @@ bool ReadObj(const std::string& path, OBJ_File& outFile) {
 				for (int i = 0; i < count; ++i) {
 					Vertex_glm vertex;
 					vertex.position = temp_vertices[vertexIndex[i] - 1];
-					// UV, Normal ¡§∫∏∞° ¿÷¥Ÿ∏È ø©±‚ø° √ﬂ∞°«“ ºˆ ¿÷Ω¿¥œ¥Ÿ.
+					// UV, Normal Ï†ïÎ≥¥Í∞Ä ÏûàÎã§Î©¥ Ïó¨Í∏∞Ïóê Ï∂îÍ∞ÄÌï† Ïàò ÏûàÏäµÎãàÎã§.
 					// vertex.uv = temp_uvs[uvIndex[i] - 1];
 					// vertex.normal = temp_normals[normalIndex[i] - 1];
-					vertex.color = glm::vec3(1.0f, 1.0f, 1.0f); // ±‚∫ª ªˆªÛ
+					vertex.color = glm::vec3(1.0f, 1.0f, 1.0f); // Í∏∞Î≥∏ ÏÉâÏÉÅ
 
 					currentObject->vertices.push_back(vertex);
 					currentObject->indices.push_back(currentObject->vertices.size() - 1);
 				}
 				};
 
-			if (matches == 9) { // ªÔ∞¢«¸
+			if (matches == 9) { // ÏÇºÍ∞ÅÌòï
 				processFace(3);
 			}
-			else if (matches == 12) { // ªÁ∞¢«¸ -> ªÔ∞¢«¸ 2∞≥∑Œ ∫–«“
+			else if (matches == 12) { // ÏÇ¨Í∞ÅÌòï -> ÏÇºÍ∞ÅÌòï 2Í∞úÎ°ú Î∂ÑÌï†
 				unsigned int v_indices[] = { 0, 1, 2, 0, 2, 3 };
 				for (int i = 0; i < 6; ++i) {
 					int idx = v_indices[i];
@@ -470,13 +382,13 @@ bool ReadObj(const std::string& path, OBJ_File& outFile) {
 				}
 			}
 			else {
-				// ¥Ÿ∏• «¸Ωƒ¿« ∏È µ•¿Ã≈Õ¥¬ «ˆ¿Á ∆ƒº≠ø°º≠ ¡ˆø¯«œ¡ˆ æ ¿Ω
+				// Îã§Î•∏ ÌòïÏãùÏùò Î©¥ Îç∞Ïù¥ÌÑ∞Îäî ÌòÑÏû¨ ÌååÏÑúÏóêÏÑú ÏßÄÏõêÌïòÏßÄ ÏïäÏùå
 				char buffer[1024];
-				fgets(buffer, 1024, file); // «ÿ¥Á ∂Û¿Œ¿« ≥™∏”¡ˆ∏¶ ¿–∞Ì π´Ω√
+				fgets(buffer, 1024, file); // Ìï¥Îãπ ÎùºÏù∏Ïùò ÎÇòÎ®∏ÏßÄÎ•º ÏùΩÍ≥† Î¨¥Ïãú
 			}
 		}
 		else {
-			// ¡÷ºÆ ∂«¥¬ ¡ˆø¯µ«¡ˆ æ ¥¬ ∂Û¿Œ Ω∫≈µ
+			// Ï£ºÏÑù ÎòêÎäî ÏßÄÏõêÎêòÏßÄ ÏïäÎäî ÎùºÏù∏ Ïä§ÌÇµ
 			char buffer[1024];
 			fgets(buffer, 1024, file);
 		}
@@ -521,7 +433,7 @@ void MakeDynamicMatrix() {
 
 	Model_Matrix = glm::mat4(1.0f);
 	Model_Matrix = glm::translate(Model_Matrix, Model_Movement_Factor);
-	
+
 	Body_Matrix = glm::mat4(1.0f);
 
 	Neck_Matrix = glm::mat4(1.0f);
@@ -537,38 +449,38 @@ void MakeDynamicMatrix() {
 	if (Rotating_Head) {
 		float param = Head_Movement_Factor_Param;  // 0.0 ~ 1.0
 
-		// ∞¢ ∫Ø¿« ±Ê¿Ã ∫Ò¿≤
-		float side1_len = 1.4f;  // Z√‡ πÊ«‚ (0.7*2)
-		float side2_len = 3.0f;  // X√‡ ¿Ω¿« πÊ«‚ (1.5*2)
-		float side3_len = 1.4f;  // Z√‡ ¿Ω¿« πÊ«‚
-		float side4_len = 3.0f;  // X√‡ æÁ¿« πÊ«‚
+		// Í∞Å Î≥ÄÏùò Í∏∏Ïù¥ ÎπÑÏú®
+		float side1_len = 1.4f;  // ZÏ∂ï Î∞©Ìñ• (0.7*2)
+		float side2_len = 3.0f;  // XÏ∂ï ÏùåÏùò Î∞©Ìñ• (1.5*2)
+		float side3_len = 1.4f;  // ZÏ∂ï ÏùåÏùò Î∞©Ìñ•
+		float side4_len = 3.0f;  // XÏ∂ï ÏñëÏùò Î∞©Ìñ•
 		float total_len = side1_len + side2_len + side3_len + side4_len;  // 8.8
 
-		// ¥©¿˚ ±Ê¿Ã ∫Ò¿≤
+		// ÎàÑÏ†Å Í∏∏Ïù¥ ÎπÑÏú®
 		float t1 = side1_len / total_len;           // 0.159
 		float t2 = (side1_len + side2_len) / total_len;  // 0.500
 		float t3 = (side1_len + side2_len + side3_len) / total_len;  // 0.659
 
 		if (param <= t1) {
-			// ∫Ø 1: (1.5, 0.7) °Ê (1.5, -0.7)
+			// Î≥Ä 1: (1.5, 0.7) ‚Üí (1.5, -0.7)
 			float localT = param / t1;
 			boundaryPos.x = 1.5f;
 			boundaryPos.z = glm::mix(0.7f, -0.7f, localT);
 		}
 		else if (param <= t2) {
-			// ∫Ø 2: (1.5, -0.7) °Ê (-1.5, -0.7)
+			// Î≥Ä 2: (1.5, -0.7) ‚Üí (-1.5, -0.7)
 			float localT = (param - t1) / (t2 - t1);
 			boundaryPos.x = glm::mix(1.5f, -1.5f, localT);
 			boundaryPos.z = -0.7f;
 		}
 		else if (param <= t3) {
-			// ∫Ø 3: (-1.5, -0.7) °Ê (-1.5, 0.7)
+			// Î≥Ä 3: (-1.5, -0.7) ‚Üí (-1.5, 0.7)
 			float localT = (param - t2) / (t3 - t2);
 			boundaryPos.x = -1.5f;
 			boundaryPos.z = glm::mix(-0.7f, 0.7f, localT);
 		}
 		else {
-			// ∫Ø 4: (-1.5, 0.7) °Ê (1.5, 0.7)
+			// Î≥Ä 4: (-1.5, 0.7) ‚Üí (1.5, 0.7)
 			float localT = (param - t3) / (1.0f - t3);
 			boundaryPos.x = glm::mix(-1.5f, 1.5f, localT);
 			boundaryPos.z = 0.7f;
@@ -594,7 +506,7 @@ void MakeDynamicMatrix() {
 	Head2_Matrix = glm::translate(Head2_Matrix, glm::vec3(1.5f, 0.0f, 0.0f));
 
 	Mouth1_Matrix = Head1_Matrix;
-	
+
 	Mouth2_Matrix = Head2_Matrix;
 
 	Flag1_Matrix = Head1_Matrix;
@@ -608,7 +520,7 @@ void MakeDynamicMatrix() {
 	Flag2_Matrix = glm::translate(Flag2_Matrix, glm::vec3(1.5, -1.75f, 0.0f));
 }
 
-void ComposeUniformVar() {
+void GetUniformLocations() {
 	// static uniform variable
 	PerspectiveMatrixID = glGetUniformLocation(shaderProgramID, "Perspective_Matrix");
 	ViewMatrixID = glGetUniformLocation(shaderProgramID, "View_Matrix");
@@ -621,7 +533,12 @@ void ComposeUniformVar() {
 	Mouth2MatrixID = glGetUniformLocation(shaderProgramID, "Mouth2_Matrix");
 	Flag1MatrixID = glGetUniformLocation(shaderProgramID, "Flag1_Matrix");
 	Flag2MatrixID = glGetUniformLocation(shaderProgramID, "Flag2_Matrix");
+	FigureTypeID = glGetUniformLocation(shaderProgramID, "Figure_Type");
 
+	// dynamic uniform variable
+	FigureTypeID = glGetUniformLocation(shaderProgramID, "Figure_Type");
+}
+void UpdateUniformMatrices() {
 	glUniformMatrix4fv(PerspectiveMatrixID, 1, GL_FALSE, &Perspective_Matrix[0][0]);
 	glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &View_Matrix[0][0]);
 	glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &Model_Matrix[0][0]);
@@ -645,45 +562,17 @@ void ComposeUniformVar() {
 	if (Mouth2MatrixID == -1) std::cerr << "Could not bind uniform Mouth2_Matrix\n";
 	if (Flag1MatrixID == -1) std::cerr << "Could not bind uniform Flag1_Matrix\n";
 	if (Flag2MatrixID == -1) std::cerr << "Could not bind uniform Flag2_Matrix\n";
-
-	// dynamic uniform variable
-	FigureTypeID = glGetUniformLocation(shaderProgramID, "Figure_Type");
 }
 void ComposeOBJColor() {
-	for(auto& file : g_OBJ_Files) {
+	for (auto& file : g_OBJ_Files) {
 		for (auto& object : file.objects) {
-			if (object.name == "Floor") {
+			if (object.name == "Box") {
 				for (auto& vertex : object.vertices) {
 					vertex.color = glm::vec3(0.4f, 0.55f, 0.4f);
 				}
 			}
-			else if (object.name == "body.001") {
-				for (auto& vertex : object.vertices) {
-					vertex.color = glm::vec3(0.25f, 0.25f, 0.25f);
-				}
-			}
-			else if (object.name == "neck.001") {
-				for (auto& vertex : object.vertices) {
-					vertex.color = glm::vec3(0.7f, 0.7f, 0.7f);
-				}
-			}
-			else if (object.name == "head_1.001" || object.name == "head_2.001") {
-				for (auto& vertex : object.vertices) {	
-					vertex.color = glm::vec3(0.2f, 0.7f, 0.2f);
-				}
-			}
-			else if (object.name == "mouth_1.001" || object.name == "mouth_2.001") {
-				for (auto& vertex : object.vertices) {
-					vertex.color = glm::vec3(0.8f, 0.8f, 0.4f);
-				}
-			}
-			else if (object.name == "flag_1.001" || object.name == "flag_2.001") {
-				for (auto& vertex : object.vertices) {
-					vertex.color = glm::vec3(0.9f, 0.5f, 0.2f);
-				}
-			}
 			else {
-				// ±‚≈∏ ∞¥√ºø° ¥Î«ÿ π´¿€¿ß ªˆªÛ «“¥Á
+				// Í∏∞ÌÉÄ Í∞ùÏ≤¥Ïóê ÎåÄÌï¥ Î¨¥ÏûëÏúÑ ÏÉâÏÉÅ Ìï†Îãπ
 				glm::vec3 randomColor(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
 				for (auto& vertex : object.vertices) {
 					vertex.color = randomColor;
