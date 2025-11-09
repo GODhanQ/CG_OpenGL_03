@@ -91,16 +91,16 @@ GLvoid drawScene() {
 			glUniform1i(FigureTypeID, Figure_Type::BOX);
 
 			GLuint all_indices_count = object.indices.size();
-			GLuint floor_face_start = 24;   // ¸é 4 ½ÃÀÛ ÀÎµ¦½º
-			GLuint floor_indices_count = 6;  // ¸é 4¸¸ (¸é 5´Â Á¦¿Ü)
+			GLuint floor_face_start = 24;   // ë©´ 4 ì‹œì‘ ì¸ë±ìŠ¤
+			GLuint floor_indices_count = 6;  // ë©´ 4ë§Œ (ë©´ 5ëŠ” ì œì™¸)
 
-			// ¹Ù´Ú¸é(¸é 4) Á¦¿ÜÇÏ°í ±×¸®±â (¸é 0~3, ¸é 5)
+			// ë°”ë‹¥ë©´(ë©´ 4) ì œì™¸í•˜ê³  ê·¸ë¦¬ê¸° (ë©´ 0~3, ë©´ 5)
 			glDrawElements(GL_TRIANGLES, floor_face_start, GL_UNSIGNED_INT, 0);
 
-			// ¸é 5 ±×¸®±â (°íÁ¤)
+			// ë©´ 5 ê·¸ë¦¬ê¸° (ê³ ì •)
 			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * 30));
 
-			// ¸é 4(Æ®·¦µµ¾î) µû·Î ±×¸®±â
+			// ë©´ 4(íŠ¸ë©ë„ì–´) ë”°ë¡œ ê·¸ë¦¬ê¸°
 			glm::mat4 Floor_Matrix = OBJ_Transform_Matrix;
 			Floor_Matrix = glm::translate(Floor_Matrix, glm::vec3(0.0f, -3.0f, 3.0f));
 			Floor_Matrix = glm::rotate(Floor_Matrix, glm::radians(-Floor_Open_Angle), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -124,7 +124,7 @@ GLvoid drawScene() {
 			glDrawElements(GL_TRIANGLES, object.indices.size(), GL_UNSIGNED_INT, 0);
 		}
 	}
-	
+
 
 	glBindVertexArray(0);
 
@@ -189,7 +189,7 @@ void KeyBoard(unsigned char key, int x, int y) {
 		std::cout << "Added one Ball object. Total objects: " << g_OBJ_Objects.size() << "\n";
 		break;
 	}
-	
+
 	case 'z':
 		Model_Transform.z += 0.5f;
 
@@ -206,7 +206,7 @@ void KeyBoard(unsigned char key, int x, int y) {
 		Model_Rotation.y -= 5.0f;
 
 		break;
-		
+
 	case 'k':
 		Open_Floor = !Open_Floor;
 
@@ -217,7 +217,7 @@ void KeyBoard(unsigned char key, int x, int y) {
 }
 void SpecialKeyBoard(int key, int x, int y) {
 	switch (key) {
-	
+
 	}
 }
 void MouseClick(int button, int state, int x, int y) {
@@ -233,7 +233,7 @@ void MouseClick(int button, int state, int x, int y) {
 	case GLUT_RIGHT_BUTTON:
 		if (state == GLUT_DOWN) {
 			Box_Rotate_Factor -= 0.03f;
-			
+
 			std::cout << "Box_Rotate_Factor: " << Box_Rotate_Factor << "\n";
 		}
 
@@ -248,7 +248,7 @@ void MouseDrag(int x, int y) {
 		if (Box_Rotate_Sum > -Max_Camera_Revolution_Angle) {
 			Box_Rotate_Factor -= 0.03f;
 		}
-		
+
 	}
 	else if (x > 0.75 * Window_width) {
 		if (Box_Rotate_Sum < Max_Camera_Revolution_Angle) {
@@ -263,7 +263,7 @@ void MousePassiveMotion(int x, int y) {
 	Mouse_X = x;
 	Mouse_Y = y;
 
-	// ¿øÇÏ´Â ·ÎÁ÷ Ãß°¡
+	// ì›í•˜ëŠ” ë¡œì§ ì¶”ê°€
 	if (x < 0.25 * Window_width) {
 		if (Box_Rotate_Sum > -60.0f) {
 			Box_Rotate_Factor -= 0.003f;
@@ -450,7 +450,7 @@ bool ReadObj(const std::string& path, OBJ_File& outFile) {
 		}
 		else if (strcmp(lineHeader, "f") == 0) {
 			if (currentObject == nullptr) {
-				// 'o' ÅÂ±× ¾øÀÌ 'f'°¡ ¸ÕÀú ³ª¿À´Â °æ¿ì¸¦ ´ëºñÇØ ±âº» °´Ã¼ »ı¼º
+				// 'o' íƒœê·¸ ì—†ì´ 'f'ê°€ ë¨¼ì € ë‚˜ì˜¤ëŠ” ê²½ìš°ë¥¼ ëŒ€ë¹„í•´ ê¸°ë³¸ ê°ì²´ ìƒì„±
 				outFile.objects.emplace_back();
 				currentObject = &outFile.objects.back();
 				currentObject->name = "default_object";
@@ -467,7 +467,7 @@ bool ReadObj(const std::string& path, OBJ_File& outFile) {
 				for (int i = 0; i < count; ++i) {
 					Vertex_glm vertex;
 					vertex.position = temp_vertices[vertexIndex[i] - 1];
-					// UV, Normal Á¤º¸°¡ ÀÖ´Ù¸é ¿©±â¿¡ Ãß°¡ÇÒ ¼ö ÀÖ½À´Ï´Ù.
+					// UV, Normal ì •ë³´ê°€ ìˆë‹¤ë©´ ì—¬ê¸°ì— ì¶”ê°€í•  ìˆ˜ ìˆìŠµë‹ˆë‹¤.
 					// vertex.uv = temp_uvs[uvIndex[i] - 1];
 					// vertex.normal = temp_normals[normalIndex[i] - 1];
 					vertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
@@ -477,10 +477,10 @@ bool ReadObj(const std::string& path, OBJ_File& outFile) {
 				}
 				};
 
-			if (matches == 9) { // »ï°¢Çü
+			if (matches == 9) { // ì‚¼ê°í˜•
 				processFace(3);
 			}
-			else if (matches == 12) { // »ç°¢Çü -> »ï°¢Çü 2°³·Î ºĞÇÒ
+			else if (matches == 12) { // ì‚¬ê°í˜• -> ì‚¼ê°í˜• 2ê°œë¡œ ë¶„í• 
 				unsigned int v_indices[] = { 0, 1, 2, 0, 2, 3 };
 				for (int i = 0; i < 6; ++i) {
 					int idx = v_indices[i];
@@ -492,13 +492,13 @@ bool ReadObj(const std::string& path, OBJ_File& outFile) {
 				}
 			}
 			else {
-				// ´Ù¸¥ Çü½ÄÀÇ ¸é µ¥ÀÌÅÍ´Â ÇöÀç Áö¿øÇÏÁö ¾ÊÀ½
+				// ë‹¤ë¥¸ í˜•ì‹ì˜ ë©´ ë°ì´í„°ëŠ” í˜„ì¬ ì§€ì›í•˜ì§€ ì•ŠìŒ
 				char buffer[1024];
-				fgets(buffer, 1024, file); // ÇØ´ç ¶óÀÎÀÇ ³ª¸ÓÁö¸¦ ÀĞ°í ¹«½Ã
+				fgets(buffer, 1024, file); // í•´ë‹¹ ë¼ì¸ì˜ ë‚˜ë¨¸ì§€ë¥¼ ì½ê³  ë¬´ì‹œ
 			}
 		}
 		else {
-			// ÁÖ¼® ¶Ç´Â Áö¿øµÇÁö ¾Ê´Â ¶óÀÎ ½ºÅµ
+			// ì£¼ì„ ë˜ëŠ” ì§€ì›ë˜ì§€ ì•ŠëŠ” ë¼ì¸ ìŠ¤í‚µ
 			char buffer[1024];
 			fgets(buffer, 1024, file);
 		}
@@ -513,7 +513,7 @@ bool ReadObj(const std::string& path, OBJ_File& outFile) {
 			continue;
 		}
 
-		// ¹Ù¿îµù¹Ú½º °è»ê
+		// ë°”ìš´ë”©ë°•ìŠ¤ ê³„ì‚°
 		glm::vec3 minBounds = object.vertices[0].position;
 		glm::vec3 maxBounds = object.vertices[0].position;
 
@@ -522,14 +522,14 @@ bool ReadObj(const std::string& path, OBJ_File& outFile) {
 			maxBounds = glm::max(maxBounds, vertex.position);
 		}
 
-		// ¹Ù¿îµù¹Ú½ºÀÇ Áß½É °è»ê (·ÎÄÃ ÁÂÇ¥)
+		// ë°”ìš´ë”©ë°•ìŠ¤ì˜ ì¤‘ì‹¬ ê³„ì‚° (ë¡œì»¬ ì¢Œí‘œ)
 		glm::vec3 boxCenter = (minBounds + maxBounds) * 0.5f;
-		object.center_offset = boxCenter;  // ¸ğµ¨ÀÇ ·ÎÄÃ Áß½É ¿ÀÇÁ¼Â ÀúÀå
+		object.center_offset = boxCenter;  // ëª¨ë¸ì˜ ë¡œì»¬ ì¤‘ì‹¬ ì˜¤í”„ì…‹ ì €ì¥
 
-		// ¹Ù¿îµù¹Ú½ºÀÇ Å©±â
+		// ë°”ìš´ë”©ë°•ìŠ¤ì˜ í¬ê¸°
 		glm::vec3 boxSize = maxBounds - minBounds;
 
-		// Ãæµ¹ ¹İÁö¸§ = ¹Ù¿îµù¹Ú½º ´ë°¢¼±ÀÇ Àı¹İ
+		// ì¶©ëŒ ë°˜ì§€ë¦„ = ë°”ìš´ë”©ë°•ìŠ¤ ëŒ€ê°ì„ ì˜ ì ˆë°˜
 		float diagonal = glm::length(boxSize);
 		object.collision_radius = diagonal * 0.5f;
 
@@ -606,7 +606,7 @@ void MakeDynamicMatrix() {
 
 	UpdateBoxPlanes(Box_Matrix);
 
-	const float friction = 0.999f;  // ¸¶Âû °è¼ö
+	const float friction = 0.999f;  // ë§ˆì°° ê³„ìˆ˜
 
 	for (auto& object : g_OBJ_Objects) {
 		if (object.name == "Box") continue;
@@ -630,14 +630,14 @@ void MakeDynamicMatrix() {
 					object.movement_vector -= plane.normal * velocityDotNormal * (1.0f + restitution);
 				}
 
-				// Cube´Â Ãæµ¹ ½Ã ¸¶Âû Àû¿ë
+				// CubeëŠ” ì¶©ëŒ ì‹œ ë§ˆì°° ì ìš©
 				if (!isBall) {
 					object.movement_vector *= friction;
 				}
 			}
 		}
 
-		// Cube´Â Ç×»ó ¸¶Âû Àû¿ë
+		// CubeëŠ” í•­ìƒ ë§ˆì°° ì ìš©
 		if (!isBall) {
 			object.movement_vector *= friction;
 		}
@@ -650,12 +650,12 @@ void ComposeUniformVar() {
 	ViewMatrixID = glGetUniformLocation(shaderProgramID, "View_Matrix");
 	ModelMatrixID = glGetUniformLocation(shaderProgramID, "Model_Matrix");
 	BoxMatrixID = glGetUniformLocation(shaderProgramID, "Box_Matrix");
-	
+
 	glUniformMatrix4fv(PerspectiveMatrixID, 1, GL_FALSE, &Perspective_Matrix[0][0]);
 	glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &View_Matrix[0][0]);
 	glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &Model_Matrix[0][0]);
 	glUniformMatrix4fv(BoxMatrixID, 1, GL_FALSE, &Box_Matrix[0][0]);
-	
+
 	if (PerspectiveMatrixID == -1) std::cerr << "Could not bind uniform Perspective_Matrix\n";
 	if (ViewMatrixID == -1) std::cerr << "Could not bind uniform View_Matrix\n";
 	if (ModelMatrixID == -1) std::cerr << "Could not bind uniform Model_Matrix\n";
@@ -702,7 +702,7 @@ void ComposeOBJColor() {
 			}
 		}
 		else {
-			// ±âÅ¸ °´Ã¼¿¡ ´ëÇØ ¹«ÀÛÀ§ »ö»ó ÇÒ´ç
+			// ê¸°íƒ€ ê°ì²´ì— ëŒ€í•´ ë¬´ì‘ìœ„ ìƒ‰ìƒ í• ë‹¹
 			glm::vec3 randomColor(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
 			for (auto& vertex : object.vertices) {
 				vertex.color = randomColor;
@@ -715,17 +715,17 @@ void InitializeBoxPlanes() {
 }
 
 void UpdateBoxPlanes(const glm::mat4& rotationMatrix) {
-	// ÃÊ±â Æò¸éµéÀ» ´Ù½Ã »ı¼º
+	// ì´ˆê¸° í‰ë©´ë“¤ì„ ë‹¤ì‹œ ìƒì„±
 	std::vector<Plane> initialPlanes;
 	float halfSize = 3.5f;
-	initialPlanes.push_back(Plane(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, -halfSize, 0.0f)));    // ¹Ù´Ú (¸é 0)
-	initialPlanes.push_back(Plane(glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, halfSize, 0.0f)));    // ÃµÀå (¸é 1)
-	initialPlanes.push_back(Plane(glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(-halfSize, 0.0f, 0.0f)));    // ¿ŞÂÊ (¸é 2)
-	initialPlanes.push_back(Plane(glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(halfSize, 0.0f, 0.0f)));    // ¿À¸¥ÂÊ (¸é 3)
-	initialPlanes.push_back(Plane(glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, -halfSize)));    // µÚ (¸é 4 - Æ®·¦µµ¾î)
-	initialPlanes.push_back(Plane(glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 0.0f, halfSize)));    // ¾Õ (¸é 5)
+	initialPlanes.push_back(Plane(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, -halfSize, 0.0f)));    // ë°”ë‹¥ (ë©´ 0)
+	initialPlanes.push_back(Plane(glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, halfSize, 0.0f)));    // ì²œì¥ (ë©´ 1)
+	initialPlanes.push_back(Plane(glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(-halfSize, 0.0f, 0.0f)));    // ì™¼ìª½ (ë©´ 2)
+	initialPlanes.push_back(Plane(glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(halfSize, 0.0f, 0.0f)));    // ì˜¤ë¥¸ìª½ (ë©´ 3)
+	initialPlanes.push_back(Plane(glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, -halfSize)));    // ë’¤ (ë©´ 4 - íŠ¸ë©ë„ì–´)
+	initialPlanes.push_back(Plane(glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 0.0f, halfSize)));    // ì• (ë©´ 5)
 
-	// È¸Àü Çà·Ä Àû¿ë
+	// íšŒì „ í–‰ë ¬ ì ìš©
 	Box_Planes.clear();
 	for (int i = 0; i < initialPlanes.size(); ++i) {
 		const auto& plane = initialPlanes[i];
@@ -733,9 +733,9 @@ void UpdateBoxPlanes(const glm::mat4& rotationMatrix) {
 		rotatedPlane.normal = glm::normalize(glm::vec3(rotationMatrix * glm::vec4(plane.normal, 0.0f)));
 		rotatedPlane.point = glm::vec3(rotationMatrix * glm::vec4(plane.point, 1.0f));
 
-		// ¸é 4(ÀÎµ¦½º 4)´Â Æ®·¦µµ¾îÀÌ¹Ç·Î Ãß°¡ È¸Àü Àû¿ë
+		// ë©´ 4(ì¸ë±ìŠ¤ 4)ëŠ” íŠ¸ë©ë„ì–´ì´ë¯€ë¡œ ì¶”ê°€ íšŒì „ ì ìš©
 		if (i == 0) {
-			// Æ®·¦µµ¾î È¸Àü: yÃà Áß½ÉÀ¸·Î -Floor_Open_Angle¸¸Å­ È¸Àü
+			// íŠ¸ë©ë„ì–´ íšŒì „: yì¶• ì¤‘ì‹¬ìœ¼ë¡œ -Floor_Open_Angleë§Œí¼ íšŒì „
 			glm::mat4 trapdoorRotation = glm::rotate(glm::mat4(1.0f), glm::radians(-Floor_Open_Angle), glm::vec3(1.0f, 0.0f, 0.0f));
 			rotatedPlane.normal = glm::normalize(glm::vec3(trapdoorRotation * glm::vec4(rotatedPlane.normal, 0.0f)));
 			rotatedPlane.point = glm::vec3(trapdoorRotation * glm::vec4(rotatedPlane.point, 1.0f));
