@@ -6,22 +6,34 @@ GLuint shaderProgramID{}, vertexShader{}, fragmentShader{};
 
 GLuint VBO_axis{}, VAO_axis{}, IBO_axis{};
 
-glm::vec3 EYE(30.0, 20.0, 30.0), AT(0.0, 0.0, 0.0), UP(0.0, 1.0, 0.0);
+bool keyStates[256] = { false, };
+std::map<int, bool> specialKeyStates;
+
+
+glm::vec3 EYE(0.0f, 20.0f, 40.0f), AT(0.0f, 5.0f, 0.0f), UP(0.0f, 1.0f, 0.0f);
+glm::vec3 Camera_Transform(0.0f, 0.0f, 0.0f), Camera_Transform_Factor(0.0f, 0.0f, 0.0f);
 GLuint PerspectiveMatrixID{}, ViewMatrixID;
-float Camera_Rotation_Sum{}, Camera_Rotation_Factor{}, Camera_Revolution_Sum{ 0.0f }, Camera_Revolution_Factor{ 0.0f };
+float Camera_Movement_Factor_Scale{ 10.f };
+float Camera_Rotation_Sum{}, Camera_Rotation_Factor{}, Camera_Rotation_Factor_Scale{ 50.f };
 
 GLuint FigureTypeID{};
+
 GLuint ModelMatrixID{};
-GLuint BodyMatrixID{}, NeckMatrixID{}, Head1MatrixID{}, Head2MatrixID;
-GLuint Mouth1MatrixID{}, Mouth2MatrixID{}, Flag1MatrixID{}, Flag2MatrixID{};
+glm::vec3 Model_Transform(0.0f, 0.0f, 0.0f), Model_Movement_Factor(0.0f, 0.0f, 0.0f);
+glm::vec3 Model_Scale(0.5f, 0.5f, 0.5f);
+float Model_Movement_Factor_Scale{ 10.0f }, Rotation_Speed{ 10.0f };
+glm::quat Model_Orientation{};
 
-glm::vec3 Model_Movement_Factor(0.0f, 0.0f, 0.0f);
-glm::vec3 Neck_Rotate_Factor(0.0, 0.0, 0.0);
-glm::vec3 Head_Rotate_Factor(0.0, 0.0, 0.0), Head_Movement_Factor(0.0, 0.0, 0.0);
-float Head_Movement_Factor_Param{ 0.0f };
-glm::vec3 Flag_Rotate_Factor(0.0, 0.0, 0.0);
+GLuint BodyMatrixID{};
 
-bool Rotating_Head{ false };
+float Animation_Time{ 0.0f }, Animation_Speed{ 5.0f };
+GLuint LeftArmMatrixID{}, RightArmMatrixID{};
+glm::vec3 Arm_Offset(0.0f, 7.5f ,0.0f), Arm_Rotation_Angle(0.0f, 0.0f, 0.0f);
+float Arm_Rotation_Speed{ 5.0f };
+
+GLuint LeftLegMatrixID{}, RightLegMatrixID{};
+glm::vec3 Leg_Offset(0.0f, 4.5f, 0.0f), Leg_Rotation_Angle(0.0f, 0.0f, 0.0f);
+float Leg_Rotation_Speed{ 5.0f };
 
 std::vector<Vertex_glm> Axis_Vertex = {
 	// Positions					// Colors

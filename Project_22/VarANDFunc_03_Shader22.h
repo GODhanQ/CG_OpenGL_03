@@ -20,18 +20,21 @@
 #define NOMINMAX
 #include <windows.h>
 
+extern bool keyStates[256];
+extern std::map<int, bool> specialKeyStates;
+
 namespace Figure_Type {
 	const int IDK = -2;
 	const int AXIS = -1;
-	const int FLOOR = 0;
-	const int BODY = 1;
-	const int NECK = 2;
-	const int HEAD_1 = 3;
-	const int HEAD_2 = 4;
-	const int MOUTH_1 = 5;
-	const int MOUTH_2 = 6;
-	const int FLAG_1 = 7;
-	const int FLAG_2 = 8;
+
+	const int BODY = 0;
+	const int LEFT_ARM = 1;
+	const int RIGHT_ARM = 2;
+	const int LEFT_LEG = 3;
+	const int RIGHT_LEG = 4;
+
+	const int BOX = 50;
+
 	const int ETC = 99;
 }
 
@@ -61,28 +64,36 @@ extern GLuint VBO_axis, VAO_axis, IBO_axis;
 extern std::vector<Vertex_glm> Axis_Vertex;
 extern std::vector<unsigned int> Axis_Index;
 
-extern glm::vec3 EYE, AT, UP;
+extern glm::vec3 EYE, AT, UP, Camera_Transform, Camera_Transform_Factor;
 extern GLuint PerspectiveMatrixID, ViewMatrixID;
-extern float Camera_Rotation_Sum, Camera_Rotation_Factor, Camera_Revolution_Sum, Camera_Revolution_Factor;
+extern float Camera_Movement_Factor_Scale;
+extern float Camera_Rotation_Sum, Camera_Rotation_Factor, Camera_Rotation_Factor_Scale;
 
 extern GLuint FigureTypeID;
+
 extern GLuint ModelMatrixID;
-extern GLuint BodyMatrixID, NeckMatrixID, Head1MatrixID, Head2MatrixID;
-extern GLuint Mouth1MatrixID, Mouth2MatrixID, Flag1MatrixID, Flag2MatrixID;
+extern glm::vec3 Model_Transform, Model_Movement_Factor, Model_Scale;
+extern float Model_Movement_Factor_Scale, Rotation_Speed;
+extern glm::quat Model_Orientation;
 
-extern glm::vec3 Model_Movement_Factor;
-extern glm::vec3 Neck_Rotate_Factor;
-extern glm::vec3 Head_Rotate_Factor, Head_Movement_Factor;
-extern float Head_Movement_Factor_Param;
-extern glm::vec3 Flag_Rotate_Factor;
+extern GLuint BodyMatrixID;
 
-extern bool Rotating_Head;
+extern float Animation_Time, Animation_Speed;
+extern GLuint LeftArmMatrixID, RightArmMatrixID;
+extern glm::vec3 Arm_Offset, Arm_Rotation_Angle;
+extern float Arm_Rotation_Speed;
+
+extern GLuint LeftLegMatrixID, RightLegMatrixID;
+extern glm::vec3 Leg_Offset, Leg_Rotation_Angle;
+extern float Leg_Rotation_Speed;
 
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);
 
 void KeyBoard(unsigned char key, int x, int y);
+void KeyBoardUp(unsigned char key, int x, int y);
 void SpecialKeyBoard(int key, int x, int y);
+void SpecialKeyBoardUp(int key, int x, int y);
 void MouseClick(int button, int state, int x, int y);
 std::pair<float, float> ConvertScreenToOpenGL(int screen_x, int screen_y);
 
@@ -98,3 +109,5 @@ void MakeDynamicMatrix();
 void GetUniformLocations();
 void UpdateUniformMatrices();
 void ComposeOBJColor();
+
+void Type_distinction(const std::string& name, GLuint& FigureTypeID);

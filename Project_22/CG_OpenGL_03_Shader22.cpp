@@ -8,8 +8,9 @@ std::uniform_int_distribution<int> uid_0_3(0, 3);
 
 glm::mat4 Perspective_Matrix(1.0f), View_Matrix;
 glm::mat4 Model_Matrix(1.0f);
-glm::mat4 Body_Matrix(1.0f), Neck_Matrix(1.0f), Head1_Matrix(1.0f), Head2_Matrix(1.0f);
-glm::mat4 Mouth1_Matrix(1.0f), Mouth2_Matrix(1.0f), Flag1_Matrix(1.0f), Flag2_Matrix(1.0f);
+glm::mat4 Body_Matrix(1.0f);
+glm::mat4 LeftArm_Matrix(1.0f), RightArm_Matrix(1.0f);
+glm::mat4 LeftLeg_Matrix(1.0f), RightLeg_Matrix(1.0f);
 
 std::vector<OBJ_File> g_OBJ_Files;
 
@@ -38,7 +39,7 @@ int main(int argc, char** argv)
 
 	glFrontFace(GL_CCW);
 	glCullFace(GL_BACK);
-	//glEnable(GL_CULL_FACE);
+	glEnable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 	std::cout << "Setup GL_CULL_FACE Completed\n";
 
@@ -61,6 +62,8 @@ int main(int argc, char** argv)
 	glutReshapeFunc(Reshape);
 	glutKeyboardFunc(KeyBoard);
 	glutSpecialFunc(SpecialKeyBoard);
+	glutKeyboardUpFunc(KeyBoardUp);
+	glutSpecialUpFunc(SpecialKeyBoardUp);
 	glutMouseFunc(MouseClick);
 	glutIdleFunc(drawScene);
 
@@ -73,7 +76,7 @@ GLvoid drawScene() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glUseProgram(shaderProgramID);
-	MakeDynamicMatrix(); // 현재 카메라 상태로 행렬 계산
+	MakeDynamicMatrix();
 
 	int width = glutGet(GLUT_WINDOW_WIDTH);
 	int height = glutGet(GLUT_WINDOW_HEIGHT);
@@ -95,7 +98,11 @@ GLvoid drawScene() {
 	for (const auto& file : g_OBJ_Files) {
 		for (const auto& object : file.objects) {
 			glBindVertexArray(object.VAO);
-			glUniform1i(FigureTypeID, Figure_Type::ETC);
+
+			GLuint Figure_Type;
+			Type_distinction(object.name, Figure_Type);
+			glUniform1i(FigureTypeID, Figure_Type);
+
 			glDrawElements(GL_TRIANGLES, object.indices.size(), GL_UNSIGNED_INT, 0);
 		}
 	}
@@ -121,7 +128,11 @@ GLvoid drawScene() {
 	for (const auto& file : g_OBJ_Files) {
 		for (const auto& object : file.objects) {
 			glBindVertexArray(object.VAO);
-			glUniform1i(FigureTypeID, Figure_Type::ETC);
+
+			GLuint Figure_Type;
+			Type_distinction(object.name, Figure_Type);
+			glUniform1i(FigureTypeID, Figure_Type);
+
 			glDrawElements(GL_TRIANGLES, object.indices.size(), GL_UNSIGNED_INT, 0);
 		}
 	}
@@ -130,22 +141,135 @@ GLvoid drawScene() {
 	glutSwapBuffers();
 }
 GLvoid Reshape(int w, int h) {
-	//glViewport(0, 0, w, h);
-	//glViewport(w * 0.75, h * 0.75, w, h);
 	MakeStaticMatrix();
 	glUniformMatrix4fv(PerspectiveMatrixID, 1, GL_FALSE, &Perspective_Matrix[0][0]);
 }
 
 void KeyBoard(unsigned char key, int x, int y) {
+	keyStates[key] = true;
 	switch (key) {
-	
+	case 'w':
+		Model_Movement_Factor.z -= 1.0f;
+		Model_Movement_Factor.z = glm::clamp(Model_Movement_Factor.z, -1.0f, 1.0f);
+		break;
+	case 's':
+		Model_Movement_Factor.z += 1.0f;
+		Model_Movement_Factor.z = glm::clamp(Model_Movement_Factor.z, -1.0f, 1.0f);
+		break;
+	case 'a':
+		Model_Movement_Factor.x -= 1.0f;
+		Model_Movement_Factor.x = glm::clamp(Model_Movement_Factor.x, -1.0f, 1.0f);
+		break;
+	case 'd':
+		Model_Movement_Factor.x += 1.0f;
+		Model_Movement_Factor.x = glm::clamp(Model_Movement_Factor.x, -1.0f, 1.0f);
+		break;
+	case '+':
+		Model_Movement_Factor_Scale += 5.0f;
+		Model_Movement_Factor_Scale = glm::clamp(Model_Movement_Factor_Scale, 10.0f, 50.0f);
+		Animation_Speed += 1.0f;
+		Animation_Speed = glm::clamp(Animation_Speed, 5.0f, 15.0f);
+
+		std::cout << "Model_Movement_Factor_Scale: " << Model_Movement_Factor_Scale << "\n";
+		break;
+	case '-':
+		Model_Movement_Factor_Scale -= 5.0f;
+		Model_Movement_Factor_Scale = glm::clamp(Model_Movement_Factor_Scale, 10.0f, 50.0f);
+		Animation_Speed -= 1.0f;
+		Animation_Speed = glm::clamp(Animation_Speed, 5.0f, 15.0f);
+
+		std::cout << "Model_Movement_Factor_Scale: " << Model_Movement_Factor_Scale << "\n";
+		break;
+
+	case 'i':
+		// Reset All
+		Model_Transform = glm::vec3(0.0f, 0.0f, 0.0f);
+		Model_Movement_Factor = glm::vec3(0.0f, 0.0f, 0.0f);
+		Model_Orientation = glm::quat();
+		Model_Scale = glm::vec3(0.5f, 0.5f, 0.5f);
+		Model_Movement_Factor_Scale = 10.0f;
+		Animation_Time = 0.0f;
+		Animation_Speed = 10.0f;
+		EYE = glm::vec3(0.0f, 20.0f, 40.0f);
+		std::cout << "Reset All Parameters\n";
+		break;
+
+	case 'x':
+		Camera_Transform_Factor.x -= 1.0f;
+		Camera_Transform_Factor.x = glm::clamp(Camera_Transform_Factor.x, -1.0f, 1.0f);
+		break;
+	case 'X':
+		Camera_Transform_Factor.x += 1.0f;
+		Camera_Transform_Factor.x = glm::clamp(Camera_Transform_Factor.x, -1.0f, 1.0f);
+		break;
+	case 'y':
+		Camera_Rotation_Factor -= 1.0f;
+		Camera_Rotation_Factor = glm::clamp(Camera_Rotation_Factor, -1.0f, 1.0f);
+		break;
+	case 'Y':
+		Camera_Rotation_Factor += 1.0f;
+		Camera_Rotation_Factor = glm::clamp(Camera_Rotation_Factor, -1.0f, 1.0f);
+		break;
+	case 'z':
+		Camera_Transform_Factor.z -= 1.0f;
+		Camera_Transform_Factor.z = glm::clamp(Camera_Transform_Factor.z, -1.0f, 1.0f);
+		break;
+	case 'Z':
+		Camera_Transform_Factor.z += 1.0f;
+		Camera_Transform_Factor.z = glm::clamp(Camera_Transform_Factor.z, -1.0f, 1.0f);
+		break;
+
 	case 'q':
 		exit(0);
+
+	default:
+		break;
+	}
+}
+void KeyBoardUp(unsigned char key, int x, int y) {
+	keyStates[key] = false;
+	switch (key) {
+	case 'w':
+		Model_Movement_Factor.z = 0.0f;
+		break;
+	case 's':
+		Model_Movement_Factor.z = 0.0f;
+		break;
+	case 'a':
+		Model_Movement_Factor.x = 0.0f;
+		break;
+	case 'd':
+		Model_Movement_Factor.x = 0.0f;
+		break;
+
+	case 'x':
+	case 'X':
+		Camera_Transform_Factor.x = 0.0f;
+		break;
+	case 'y':
+	case 'Y':
+		Camera_Rotation_Factor = 0.0f;
+		break;
+	case 'z':
+	case 'Z':
+		Camera_Transform_Factor.z = 0.0f;
+		break;
+
+	default:
+		break;
 	}
 }
 void SpecialKeyBoard(int key, int x, int y) {
+	specialKeyStates[key] = true;
 	switch (key) {
 
+	default:
+		break;
+	}
+}
+void SpecialKeyBoardUp(int key, int x, int y) {
+	specialKeyStates[key] = false;
+	switch (key) {
 	default:
 		break;
 	}
@@ -402,122 +526,67 @@ void MakeStaticMatrix() {
 	Perspective_Matrix = glm::perspective(glm::radians(45.0f), (float)Window_width / (float)Window_height, 0.1f, 100.0f);
 }
 void MakeDynamicMatrix() {
-	static glm::vec3 initialEYE = glm::vec3(15.0f, 10.0f, 15.0f);
-	static float distanceEyeToAT = glm::distance(initialEYE, glm::vec3(0.0f, 0.0f, 0.0f));
-	static float distanceATToOrigin = glm::distance(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+	// delta time
+	static auto lastTime = std::chrono::high_resolution_clock::now();
+	auto currentTime = std::chrono::high_resolution_clock::now();
+	float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - lastTime).count();
+	lastTime = currentTime;
 
+	// Camera Translation
+	EYE += Camera_Transform_Factor * deltaTime * Camera_Movement_Factor_Scale;
+
+	// Camera Rotation
 	if (Camera_Rotation_Factor != 0.0f) {
-		glm::vec3 direction = glm::normalize(EYE - AT);
-
-		glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f),
-			glm::radians(Camera_Rotation_Factor),
+		glm::vec3 direction = EYE - AT;
+		glm::mat4 rotation_matrix = glm::rotate(glm::mat4(1.0f),
+			glm::radians(Camera_Rotation_Factor * Camera_Rotation_Factor_Scale * deltaTime),
 			glm::vec3(0.0f, 1.0f, 0.0f));
-
-		glm::vec4 rotatedDirection = rotationMatrix * glm::vec4(direction, 0.0f);
-		EYE = AT + glm::normalize(glm::vec3(rotatedDirection)) * distanceEyeToAT;
+		EYE = AT + glm::vec3(rotation_matrix * glm::vec4(direction, 0.0f));
 	}
 
-	if (Camera_Revolution_Factor != 0.0f) {
-		glm::vec3 direction = glm::normalize(AT - EYE);
-
-		glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f),
-			glm::radians(Camera_Revolution_Factor),
-			glm::vec3(0.0f, 1.0f, 0.0f));
-
-		glm::vec4 rotatedDirection = rotationMatrix * glm::vec4(direction, 0.0f);
-		AT = EYE + glm::normalize(glm::vec3(rotatedDirection)) * distanceEyeToAT;
-	}
-
-	View_Matrix = glm::mat4(1.0f);
 	View_Matrix = glm::lookAt(EYE, AT, UP);
 
+	if (glm::length(Model_Movement_Factor) > 0.0f) {
+		// Animation
+		Animation_Time += deltaTime * Animation_Speed;
+		Arm_Rotation_Angle.x = 60.0f * sin(Animation_Time);
+		Leg_Rotation_Angle.x = 60.0f * cos(Animation_Time);
+
+		glm::vec3 move_direction = glm::normalize(Model_Movement_Factor);
+		glm::quat target_orientation = glm::quatLookAt(move_direction, glm::vec3(0.0f, 1.0f, 0.0f));
+
+		Model_Orientation = glm::slerp(Model_Orientation, target_orientation, deltaTime * Rotation_Speed);
+
+		Model_Transform += Model_Orientation * glm::vec3(0, 0, -1) * Model_Movement_Factor_Scale * deltaTime;
+	}
+	else {
+		Animation_Time = 0.0f;
+		Arm_Rotation_Angle.x = 0.0f;
+		Leg_Rotation_Angle.x = 0.0f;
+	}
+
+	glm::mat4 rotationMatrix = glm::mat4_cast(Model_Orientation);
+	glm::mat4 correctionMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	Model_Matrix = glm::mat4(1.0f);
-	Model_Matrix = glm::translate(Model_Matrix, Model_Movement_Factor);
+	Model_Matrix = glm::translate(Model_Matrix, Model_Transform);
+	Model_Matrix = glm::scale(Model_Matrix, Model_Scale);
+	Model_Matrix = Model_Matrix * rotationMatrix * correctionMatrix;
 
-	Body_Matrix = glm::mat4(1.0f);
+	LeftArm_Matrix = glm::translate(glm::mat4(1.0f), Arm_Offset);
+	LeftArm_Matrix = glm::rotate(LeftArm_Matrix, glm::radians(Arm_Rotation_Angle.x), glm::vec3(1.0f, 0.0f, 0.0f));
+	LeftArm_Matrix = glm::translate(LeftArm_Matrix, -Arm_Offset);
 
-	Neck_Matrix = glm::mat4(1.0f);
-	Neck_Matrix = glm::rotate(Neck_Matrix, glm::radians(Neck_Rotate_Factor.y), glm::vec3(0.0f, 1.0f, 0.0f));
+	RightArm_Matrix = glm::translate(glm::mat4(1.0f), glm::vec3(-Arm_Offset.x, Arm_Offset.y, Arm_Offset.z));
+	RightArm_Matrix = glm::rotate(RightArm_Matrix, glm::radians(-Arm_Rotation_Angle.x), glm::vec3(1.0f, 0.0f, 0.0f));
+	RightArm_Matrix = glm::translate(RightArm_Matrix, -glm::vec3(-Arm_Offset.x, Arm_Offset.y, Arm_Offset.z));
 
-	if (Rotating_Head) {
-		Head_Movement_Factor_Param += 0.002f;
-		if (Head_Movement_Factor_Param > 1.0f)
-			Head_Movement_Factor_Param = 0.0f;
-	}
-	glm::vec3 boundaryPos = glm::vec3(0.0f, 0.0f, 0.0f);
+	LeftLeg_Matrix = glm::translate(glm::mat4(1.0f), Leg_Offset);
+	LeftLeg_Matrix = glm::rotate(LeftLeg_Matrix, glm::radians(Leg_Rotation_Angle.x), glm::vec3(1.0f, 0.0f, 0.0f));
+	LeftLeg_Matrix = glm::translate(LeftLeg_Matrix, -Leg_Offset);
 
-	if (Rotating_Head) {
-		float param = Head_Movement_Factor_Param;  // 0.0 ~ 1.0
-
-		// 각 변의 길이 비율
-		float side1_len = 1.4f;  // Z축 방향 (0.7*2)
-		float side2_len = 3.0f;  // X축 음의 방향 (1.5*2)
-		float side3_len = 1.4f;  // Z축 음의 방향
-		float side4_len = 3.0f;  // X축 양의 방향
-		float total_len = side1_len + side2_len + side3_len + side4_len;  // 8.8
-
-		// 누적 길이 비율
-		float t1 = side1_len / total_len;           // 0.159
-		float t2 = (side1_len + side2_len) / total_len;  // 0.500
-		float t3 = (side1_len + side2_len + side3_len) / total_len;  // 0.659
-
-		if (param <= t1) {
-			// 변 1: (1.5, 0.7) → (1.5, -0.7)
-			float localT = param / t1;
-			boundaryPos.x = 1.5f;
-			boundaryPos.z = glm::mix(0.7f, -0.7f, localT);
-		}
-		else if (param <= t2) {
-			// 변 2: (1.5, -0.7) → (-1.5, -0.7)
-			float localT = (param - t1) / (t2 - t1);
-			boundaryPos.x = glm::mix(1.5f, -1.5f, localT);
-			boundaryPos.z = -0.7f;
-		}
-		else if (param <= t3) {
-			// 변 3: (-1.5, -0.7) → (-1.5, 0.7)
-			float localT = (param - t2) / (t3 - t2);
-			boundaryPos.x = -1.5f;
-			boundaryPos.z = glm::mix(-0.7f, 0.7f, localT);
-		}
-		else {
-			// 변 4: (-1.5, 0.7) → (1.5, 0.7)
-			float localT = (param - t3) / (1.0f - t3);
-			boundaryPos.x = glm::mix(-1.5f, 1.5f, localT);
-			boundaryPos.z = 0.7f;
-		}
-	}
-
-	Head1_Matrix = Neck_Matrix;
-	if (Rotating_Head) {
-		Head1_Matrix = glm::translate(Head1_Matrix, glm::vec3(-1.5, 0.0, 0.0));
-		Head1_Matrix = glm::translate(Head1_Matrix, boundaryPos);
-	}
-	Head1_Matrix = glm::translate(Head1_Matrix, glm::vec3(1.5f, 0.0f, 0.0f));
-	Head1_Matrix = glm::rotate(Head1_Matrix, glm::radians(Head_Rotate_Factor.y), glm::vec3(0.0f, 1.0f, 0.0f));
-	Head1_Matrix = glm::translate(Head1_Matrix, glm::vec3(-1.5f, 0.0f, 0.0f));
-
-	Head2_Matrix = Neck_Matrix;
-	if (Rotating_Head) {
-		Head2_Matrix = glm::translate(Head2_Matrix, glm::vec3(1.5, 0.0, 0.0));
-		Head2_Matrix = glm::translate(Head2_Matrix, -boundaryPos);
-	}
-	Head2_Matrix = glm::translate(Head2_Matrix, glm::vec3(-1.5f, 0.0f, 0.0f));
-	Head2_Matrix = glm::rotate(Head2_Matrix, glm::radians(-Head_Rotate_Factor.y), glm::vec3(0.0f, 1.0f, 0.0f));
-	Head2_Matrix = glm::translate(Head2_Matrix, glm::vec3(1.5f, 0.0f, 0.0f));
-
-	Mouth1_Matrix = Head1_Matrix;
-
-	Mouth2_Matrix = Head2_Matrix;
-
-	Flag1_Matrix = Head1_Matrix;
-	Flag1_Matrix = glm::translate(Flag1_Matrix, glm::vec3(1.5, 1.75f, 0.0f));
-	Flag1_Matrix = glm::rotate(Flag1_Matrix, glm::radians(Flag_Rotate_Factor.x), glm::vec3(1.0f, 0.0f, 0.0f));
-	Flag1_Matrix = glm::translate(Flag1_Matrix, glm::vec3(-1.5, -1.75f, 0.0f));
-
-	Flag2_Matrix = Head2_Matrix;
-	Flag2_Matrix = glm::translate(Flag2_Matrix, glm::vec3(-1.5, 1.75f, 0.0f));
-	Flag2_Matrix = glm::rotate(Flag2_Matrix, glm::radians(-Flag_Rotate_Factor.x), glm::vec3(1.0f, 0.0f, 0.0f));
-	Flag2_Matrix = glm::translate(Flag2_Matrix, glm::vec3(1.5, -1.75f, 0.0f));
+	RightLeg_Matrix = glm::translate(glm::mat4(1.0f), glm::vec3(-Leg_Offset.x, Leg_Offset.y, Leg_Offset.z));
+	RightLeg_Matrix = glm::rotate(RightLeg_Matrix, glm::radians(-Leg_Rotation_Angle.x), glm::vec3(1.0f, 0.0f, 0.0f));
+	RightLeg_Matrix = glm::translate(RightLeg_Matrix, -glm::vec3(-Leg_Offset.x, Leg_Offset.y, Leg_Offset.z));
 }
 
 void GetUniformLocations() {
@@ -526,14 +595,10 @@ void GetUniformLocations() {
 	ViewMatrixID = glGetUniformLocation(shaderProgramID, "View_Matrix");
 	ModelMatrixID = glGetUniformLocation(shaderProgramID, "Model_Matrix");
 	BodyMatrixID = glGetUniformLocation(shaderProgramID, "Body_Matrix");
-	NeckMatrixID = glGetUniformLocation(shaderProgramID, "Neck_Matrix");
-	Head1MatrixID = glGetUniformLocation(shaderProgramID, "Head1_Matrix");
-	Head2MatrixID = glGetUniformLocation(shaderProgramID, "Head2_Matrix");
-	Mouth1MatrixID = glGetUniformLocation(shaderProgramID, "Mouth1_Matrix");
-	Mouth2MatrixID = glGetUniformLocation(shaderProgramID, "Mouth2_Matrix");
-	Flag1MatrixID = glGetUniformLocation(shaderProgramID, "Flag1_Matrix");
-	Flag2MatrixID = glGetUniformLocation(shaderProgramID, "Flag2_Matrix");
-	FigureTypeID = glGetUniformLocation(shaderProgramID, "Figure_Type");
+	LeftArmMatrixID = glGetUniformLocation(shaderProgramID, "LeftArm_Matrix");
+	RightArmMatrixID = glGetUniformLocation(shaderProgramID, "RightArm_Matrix");
+	LeftLegMatrixID = glGetUniformLocation(shaderProgramID, "LeftLeg_Matrix");
+	RightLegMatrixID = glGetUniformLocation(shaderProgramID, "RightLeg_Matrix");
 
 	// dynamic uniform variable
 	FigureTypeID = glGetUniformLocation(shaderProgramID, "Figure_Type");
@@ -543,32 +608,57 @@ void UpdateUniformMatrices() {
 	glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &View_Matrix[0][0]);
 	glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &Model_Matrix[0][0]);
 	glUniformMatrix4fv(BodyMatrixID, 1, GL_FALSE, &Body_Matrix[0][0]);
-	glUniformMatrix4fv(NeckMatrixID, 1, GL_FALSE, &Neck_Matrix[0][0]);
-	glUniformMatrix4fv(Head1MatrixID, 1, GL_FALSE, &Head1_Matrix[0][0]);
-	glUniformMatrix4fv(Head2MatrixID, 1, GL_FALSE, &Head2_Matrix[0][0]);
-	glUniformMatrix4fv(Mouth1MatrixID, 1, GL_FALSE, &Mouth1_Matrix[0][0]);
-	glUniformMatrix4fv(Mouth2MatrixID, 1, GL_FALSE, &Mouth2_Matrix[0][0]);
-	glUniformMatrix4fv(Flag1MatrixID, 1, GL_FALSE, &Flag1_Matrix[0][0]);
-	glUniformMatrix4fv(Flag2MatrixID, 1, GL_FALSE, &Flag2_Matrix[0][0]);
+	glUniformMatrix4fv(LeftArmMatrixID, 1, GL_FALSE, &LeftArm_Matrix[0][0]);
+	glUniformMatrix4fv(RightArmMatrixID, 1, GL_FALSE, &RightArm_Matrix[0][0]);
+	glUniformMatrix4fv(LeftLegMatrixID, 1, GL_FALSE, &LeftLeg_Matrix[0][0]);
+	glUniformMatrix4fv(RightLegMatrixID, 1, GL_FALSE, &RightLeg_Matrix[0][0]);
 
 	if (PerspectiveMatrixID == -1) std::cerr << "Could not bind uniform Perspective_Matrix\n";
 	if (ViewMatrixID == -1) std::cerr << "Could not bind uniform View_Matrix\n";
 	if (ModelMatrixID == -1) std::cerr << "Could not bind uniform Model_Matrix\n";
 	if (BodyMatrixID == -1) std::cerr << "Could not bind uniform Body_Matrix\n";
-	if (NeckMatrixID == -1) std::cerr << "Could not bind uniform Neck_Matrix\n";
-	if (Head1MatrixID == -1) std::cerr << "Could not bind uniform Head1_Matrix\n";
-	if (Head2MatrixID == -1) std::cerr << "Could not bind uniform Head2_Matrix\n";
-	if (Mouth1MatrixID == -1) std::cerr << "Could not bind uniform Mouth1_Matrix\n";
-	if (Mouth2MatrixID == -1) std::cerr << "Could not bind uniform Mouth2_Matrix\n";
-	if (Flag1MatrixID == -1) std::cerr << "Could not bind uniform Flag1_Matrix\n";
-	if (Flag2MatrixID == -1) std::cerr << "Could not bind uniform Flag2_Matrix\n";
+	if (LeftArmMatrixID == -1) std::cerr << "Could not bind uniform LeftArm_Matrix\n";
+	if (RightArmMatrixID == -1) std::cerr << "Could not bind uniform RightArm_Matrix\n";
+	if (LeftLegMatrixID == -1) std::cerr << "Could not bind uniform LeftLeg_Matrix\n";
+	if (RightLegMatrixID == -1) std::cerr << "Could not bind uniform RightLeg_Matrix\n";
+
 }
 void ComposeOBJColor() {
 	for (auto& file : g_OBJ_Files) {
 		for (auto& object : file.objects) {
 			if (object.name == "Box") {
+				glm::vec3 faceColors[6] = {
+					glm::vec3(0.6f, 0.6f, 0.6f),
+					glm::vec3(0.2f, 0.2f, 0.2f),
+					glm::vec3(0.6f, 0.6f, 0.6f),
+					glm::vec3(0.2f, 0.2f, 0.2f),
+					glm::vec3(0.4f, 0.4f, 0.4f),
+					glm::vec3(0.4f, 0.4f, 0.4f)
+				};
+
+				int trianglePerFace = 6;
+				for (size_t i = 0; i < object.indices.size(); ++i) {
+					unsigned int faceIndex = i / trianglePerFace;
+					faceIndex = faceIndex % 6;
+					object.vertices[object.indices[i]].color = faceColors[faceIndex];
+				}
+			}
+			else if (object.name == "body") {
+				glm::vec3 bodyColor(0.5f, 0.5f, 0.8f);
 				for (auto& vertex : object.vertices) {
-					vertex.color = glm::vec3(0.4f, 0.55f, 0.4f);
+					vertex.color = bodyColor;
+				}
+			}
+			else if (object.name == "left_arm" || object.name == "right_arm") {
+				glm::vec3 armColor(0.3f, 0.3f, 0.8f);
+				for (auto& vertex : object.vertices) {
+					vertex.color = armColor;
+				}
+			}
+			else if (object.name == "left_leg" || object.name == "right_leg") {
+				glm::vec3 legColor(0.8f, 0.3f, 0.3f);
+				for (auto& vertex : object.vertices) {
+					vertex.color = legColor;
 				}
 			}
 			else {
@@ -579,5 +669,29 @@ void ComposeOBJColor() {
 				}
 			}
 		}
+	}
+}
+
+void Type_distinction(const std::string& object_name, GLuint& outTypeID) {
+	if (object_name == "body") {
+		outTypeID = Figure_Type::BODY;
+	}
+	else if (object_name == "left_arm") {
+		outTypeID = Figure_Type::LEFT_ARM;
+	}
+	else if (object_name == "right_arm") {
+		outTypeID = Figure_Type::RIGHT_ARM;
+	}
+	else if (object_name == "left_leg") {
+		outTypeID = Figure_Type::LEFT_LEG;
+	}
+	else if (object_name == "right_leg") {
+		outTypeID = Figure_Type::RIGHT_LEG;
+	}
+	else if (object_name == "Box") {
+		outTypeID = Figure_Type::BOX;
+	}
+	else {
+		outTypeID = Figure_Type::ETC;
 	}
 }
