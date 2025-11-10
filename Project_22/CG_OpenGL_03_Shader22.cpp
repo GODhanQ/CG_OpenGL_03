@@ -13,6 +13,8 @@ glm::mat4 LeftArm_Matrix(1.0f), RightArm_Matrix(1.0f);
 glm::mat4 LeftLeg_Matrix(1.0f), RightLeg_Matrix(1.0f);
 
 std::vector<OBJ_File> g_OBJ_Files;
+std::map<std::string, AABB> g_LocalAABBs; // 객체별 로컬 AABB 저장
+
 
 int main(int argc, char** argv)
 {
@@ -71,7 +73,7 @@ int main(int argc, char** argv)
 }
 
 GLvoid drawScene() {
-	GLfloat rColor{ 0.5f }, gColor{ 0.5f }, bColor{ 0.5f };
+	GLfloat rColor{ 0.5f }, gColor{ 0.5f }, bColor{ 0.7f };
 	glClearColor(rColor, gColor, bColor, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -83,7 +85,7 @@ GLvoid drawScene() {
 
 	// 1. Main Viewport
 	glViewport(0, 0, width, height);
-	Perspective_Matrix = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
+	Perspective_Matrix = glm::perspective(FOV, AspectRatio, NearClip, FarClip);
 	View_Matrix = glm::lookAt(EYE, AT, UP);
 	UpdateUniformMatrices();
 
@@ -113,7 +115,7 @@ GLvoid drawScene() {
 	glViewport(width - minimap_size, height - minimap_size, minimap_size, minimap_size);
 
 	// 미니맵을 위한 Orthographic Projection과 Top-down View 설정
-	Perspective_Matrix = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, 1.0f, 100.0f);
+	Perspective_Matrix = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, NearClip, FarClip);
 	View_Matrix = glm::lookAt(glm::vec3(0.0f, 50.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
 	UpdateUniformMatrices();
 
@@ -180,6 +182,12 @@ void KeyBoard(unsigned char key, int x, int y) {
 
 		std::cout << "Model_Movement_Factor_Scale: " << Model_Movement_Factor_Scale << "\n";
 		break;
+	case ' ':
+		if (!is_Jumping) {
+			is_Jumping = true;
+			Model_Velocity.y = JUMP_FORCE;
+		}
+		break;
 
 	case 'i':
 		// Reset All
@@ -191,6 +199,7 @@ void KeyBoard(unsigned char key, int x, int y) {
 		Animation_Time = 0.0f;
 		Animation_Speed = 10.0f;
 		EYE = glm::vec3(0.0f, 20.0f, 40.0f);
+		is_Jumping = false;
 		std::cout << "Reset All Parameters\n";
 		break;
 
@@ -219,6 +228,11 @@ void KeyBoard(unsigned char key, int x, int y) {
 		Camera_Transform_Factor.z = glm::clamp(Camera_Transform_Factor.z, -1.0f, 1.0f);
 		break;
 
+	case '1':
+		LookAtRobot = !LookAtRobot;
+
+		break;
+
 	case 'q':
 		exit(0);
 
@@ -230,16 +244,16 @@ void KeyBoardUp(unsigned char key, int x, int y) {
 	keyStates[key] = false;
 	switch (key) {
 	case 'w':
-		Model_Movement_Factor.z = 0.0f;
+		Model_Movement_Factor.z += 1.0f;
 		break;
 	case 's':
-		Model_Movement_Factor.z = 0.0f;
+		Model_Movement_Factor.z -= 1.0f;
 		break;
 	case 'a':
-		Model_Movement_Factor.x = 0.0f;
+		Model_Movement_Factor.x += 1.0f;
 		break;
 	case 'd':
-		Model_Movement_Factor.x = 0.0f;
+		Model_Movement_Factor.x -= 1.0f;
 		break;
 
 	case 'x':
@@ -262,7 +276,6 @@ void KeyBoardUp(unsigned char key, int x, int y) {
 void SpecialKeyBoard(int key, int x, int y) {
 	specialKeyStates[key] = true;
 	switch (key) {
-
 	default:
 		break;
 	}
@@ -324,6 +337,10 @@ void INIT_BUFFER() {
 			glBufferData(GL_ELEMENT_ARRAY_BUFFER, object.indices.size() * sizeof(unsigned int), object.indices.data(), GL_STATIC_DRAW);
 
 			std::cout << "  L  Buffered Object: " << object.name << ", VAO: " << object.VAO << "\n";
+			
+			// 각 객체의 로컬 AABB 계산 및 저장
+			g_LocalAABBs[object.name] = CalculateAABB(object.vertices);
+			std::cout << "     Calculated AABB for " << object.name << "\n";
 		}
 	}
 	glBindVertexArray(0);
@@ -480,13 +497,15 @@ bool ReadObj(const std::string& path, OBJ_File& outFile) {
 			auto processFace = [&](int count) {
 				for (int i = 0; i < count; ++i) {
 					Vertex_glm vertex;
+					glm::vec3 normal;
 					vertex.position = temp_vertices[vertexIndex[i] - 1];
 					// UV, Normal 정보가 있다면 여기에 추가할 수 있습니다.
 					// vertex.uv = temp_uvs[uvIndex[i] - 1];
-					// vertex.normal = temp_normals[normalIndex[i] - 1];
+					normal = temp_normals[normalIndex[i] - 1];
 					vertex.color = glm::vec3(1.0f, 1.0f, 1.0f); // 기본 색상
 
 					currentObject->vertices.push_back(vertex);
+					currentObject->normals.push_back(normal);
 					currentObject->indices.push_back(currentObject->vertices.size() - 1);
 				}
 				};
@@ -523,7 +542,7 @@ bool ReadObj(const std::string& path, OBJ_File& outFile) {
 }
 
 void MakeStaticMatrix() {
-	Perspective_Matrix = glm::perspective(glm::radians(45.0f), (float)Window_width / (float)Window_height, 0.1f, 100.0f);
+	Perspective_Matrix = glm::perspective(FOV, AspectRatio, NearClip, FarClip);
 }
 void MakeDynamicMatrix() {
 	// delta time
@@ -546,6 +565,11 @@ void MakeDynamicMatrix() {
 
 	View_Matrix = glm::lookAt(EYE, AT, UP);
 
+	// 1. 중력 적용
+	Model_Velocity.y -= GRAVITY * deltaTime;
+
+	// 2. 사용자 입력에 따른 수평 이동 계산
+	glm::vec3 horizontal_move(0.0f);
 	if (glm::length(Model_Movement_Factor) > 0.0f) {
 		// Animation
 		Animation_Time += deltaTime * Animation_Speed;
@@ -557,7 +581,7 @@ void MakeDynamicMatrix() {
 
 		Model_Orientation = glm::slerp(Model_Orientation, target_orientation, deltaTime * Rotation_Speed);
 
-		Model_Transform += Model_Orientation * glm::vec3(0, 0, -1) * Model_Movement_Factor_Scale * deltaTime;
+		horizontal_move = Model_Orientation * glm::vec3(0, 0, -1) * Model_Movement_Factor_Scale * deltaTime;
 	}
 	else {
 		Animation_Time = 0.0f;
@@ -565,12 +589,80 @@ void MakeDynamicMatrix() {
 		Leg_Rotation_Angle.x = 0.0f;
 	}
 
+	// 3. 충돌 감지 및 반응 (축 분리)
+	AABB boxWorldAABB = TransformAABB(g_LocalAABBs["Box"], glm::mat4(1.0f));
+	std::vector<std::string> robot_parts = { "body", "left_arm", "right_arm", "left_leg", "right_leg" };
+
 	glm::mat4 rotationMatrix = glm::mat4_cast(Model_Orientation);
 	glm::mat4 correctionMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+	// 3-1. 수평 이동 (XZ)
+	glm::vec3 next_pos_h = Model_Transform + glm::vec3(horizontal_move.x, 0.0f, horizontal_move.z);
+	glm::mat4 nextModelMatrix_h = glm::translate(glm::mat4(1.0f), next_pos_h);
+	nextModelMatrix_h = glm::scale(nextModelMatrix_h, Model_Scale);
+	nextModelMatrix_h = nextModelMatrix_h * rotationMatrix * correctionMatrix;
+
+	bool horizontalCollision = false;
+	for (const auto& part_name : robot_parts) {
+		if (g_LocalAABBs.count(part_name)) {
+			AABB robotPartWorldAABB = TransformAABB(g_LocalAABBs[part_name], nextModelMatrix_h);
+			// 로봇의 다음 위치가 Box 내부에 있지 않다면 충돌로 간주
+			if (!IsAABBInside(robotPartWorldAABB, boxWorldAABB)) {
+				horizontalCollision = true;
+				break;
+			}
+		}
+	}
+	if (!horizontalCollision) {
+		Model_Transform = next_pos_h;
+	}
+
+	// 3-2. 수직 이동 (Y)
+	glm::vec3 vertical_move = glm::vec3(0.0f, Model_Velocity.y * deltaTime, 0.0f);
+	glm::vec3 next_pos_v = Model_Transform + vertical_move;
+	glm::mat4 nextModelMatrix_v = glm::translate(glm::mat4(1.0f), next_pos_v);
+	nextModelMatrix_v = glm::scale(nextModelMatrix_v, Model_Scale);
+	nextModelMatrix_v = nextModelMatrix_v * rotationMatrix * correctionMatrix;
+
+	bool verticalCollision = false;
+	for (const auto& part_name : robot_parts) {
+		if (g_LocalAABBs.count(part_name)) {
+			AABB robotPartWorldAABB = TransformAABB(g_LocalAABBs[part_name], nextModelMatrix_v);
+			// 로봇의 다음 위치가 Box 내부에 있지 않다면 충돌로 간주
+			if (!IsAABBInside(robotPartWorldAABB, boxWorldAABB)) {
+				verticalCollision = true;
+				break;
+			}
+		}
+	}
+
+	if (verticalCollision) {
+		// 바닥 또는 천장과 충돌
+		if (Model_Velocity.y < 0) { // 바닥
+			Model_Transform.y = boxWorldAABB.min.y - (g_LocalAABBs["left_leg"].min.y * Model_Scale.y); // 발바닥 맞춤
+			Model_Velocity.y = 0;
+			is_Jumping = false;
+		}
+		else if (Model_Velocity.y > 0) { // 천장
+			Model_Velocity.y = 0;
+		}
+	}
+	else {
+		Model_Transform = next_pos_v;
+		is_Jumping = true;
+	}
+
+	rotationMatrix = glm::mat4_cast(Model_Orientation);
+	correctionMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	Model_Matrix = glm::mat4(1.0f);
 	Model_Matrix = glm::translate(Model_Matrix, Model_Transform);
 	Model_Matrix = glm::scale(Model_Matrix, Model_Scale);
 	Model_Matrix = Model_Matrix * rotationMatrix * correctionMatrix;
+
+	if (LookAtRobot) {
+		AT = Model_Transform;
+		EYE = AT + glm::vec3(0.0f, 20.0f, 40.0f);
+	}
 
 	LeftArm_Matrix = glm::translate(glm::mat4(1.0f), Arm_Offset);
 	LeftArm_Matrix = glm::rotate(LeftArm_Matrix, glm::radians(Arm_Rotation_Angle.x), glm::vec3(1.0f, 0.0f, 0.0f));

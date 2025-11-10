@@ -134,6 +134,14 @@
   <ItemGroup>
     <ClInclude Include="VarANDFunc_03_Shader22.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Object Include="OBJ\Box.obj">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </Object>
+    <Object Include="OBJ\Robot.obj">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </Object>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

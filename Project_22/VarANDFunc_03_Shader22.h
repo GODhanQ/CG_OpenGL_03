@@ -46,6 +46,7 @@ struct Vertex_glm {
 struct Custom_OBJ {
 	std::string name;
 	std::vector<Vertex_glm> vertices;
+	std::vector<glm::vec3> normals;
 	std::vector<unsigned int> indices;
 	GLuint VBO{}, VAO{}, IBO{};
 
@@ -54,6 +55,11 @@ struct Custom_OBJ {
 struct OBJ_File {
 	std::string file_name;
 	std::vector<Custom_OBJ> objects;
+};
+
+struct AABB {
+	glm::vec3 min;
+	glm::vec3 max;
 };
 
 extern GLint Window_width, Window_height;
@@ -66,6 +72,7 @@ extern std::vector<unsigned int> Axis_Index;
 
 extern glm::vec3 EYE, AT, UP, Camera_Transform, Camera_Transform_Factor;
 extern GLuint PerspectiveMatrixID, ViewMatrixID;
+extern float FOV, AspectRatio, NearClip, FarClip;
 extern float Camera_Movement_Factor_Scale;
 extern float Camera_Rotation_Sum, Camera_Rotation_Factor, Camera_Rotation_Factor_Scale;
 
@@ -75,6 +82,11 @@ extern GLuint ModelMatrixID;
 extern glm::vec3 Model_Transform, Model_Movement_Factor, Model_Scale;
 extern float Model_Movement_Factor_Scale, Rotation_Speed;
 extern glm::quat Model_Orientation;
+extern glm::vec3 Model_Velocity;
+extern bool is_Jumping;
+extern const float GRAVITY;
+extern const float JUMP_FORCE;
+extern float Gravity_Scale;
 
 extern GLuint BodyMatrixID;
 
@@ -86,6 +98,8 @@ extern float Arm_Rotation_Speed;
 extern GLuint LeftLegMatrixID, RightLegMatrixID;
 extern glm::vec3 Leg_Offset, Leg_Rotation_Angle;
 extern float Leg_Rotation_Speed;
+
+extern bool LookAtRobot;
 
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);
@@ -111,3 +125,9 @@ void UpdateUniformMatrices();
 void ComposeOBJColor();
 
 void Type_distinction(const std::string& name, GLuint& FigureTypeID);
+
+
+AABB CalculateAABB(const std::vector<Vertex_glm>& vertices);
+AABB TransformAABB(const AABB& aabb, const glm::mat4& transform);
+bool CheckCollision(const AABB& a, const AABB& b);
+bool IsAABBInside(const AABB& inner, const AABB& outer);
