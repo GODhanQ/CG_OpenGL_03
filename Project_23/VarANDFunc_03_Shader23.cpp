@@ -14,7 +14,7 @@ GLuint ModelMatrixID{};
 GLuint OBJModelTransformMatrixID{}, BoxMatrixID{};
 GLuint OBJCenterOffsetID{};
 
-float Gravity_Factor{ 0.00000098f }, Delta_Time{};
+float Gravity_Factor{ 0.00098f }, Delta_Time{};
 std::chrono::high_resolution_clock::time_point Last_Frame_Time;
 std::vector<Plane> Box_Planes;
 float Object_Radius{ 1.0f }, Box_Rotate_Factor{ 0.0f }, Box_Rotate_Sum{};

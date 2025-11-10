@@ -65,179 +65,90 @@ int main(int argc, char** argv)
 }
 
 GLvoid drawScene() {
-	GLfloat rColor{ 0.4f }, gColor{ 0.4f }, bColor{ 0.6f };
-	glClearColor(rColor, gColor, bColor, 1.0f);
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glUseProgram(shaderProgramID);
-	MakeDynamicMatrix();
-
 	ComposeUniformVar();
 
-	// First Viewport
+	// -- 1. First Viewport: Perspective from Front (Left 75%) --
 	glViewport(0, 0, Window_width * 0.75, Window_height);
-	MakeStaticMatrix(Window_width * 0.75f, Window_height);
+	glm::mat4 view = glm::lookAt(glm::vec3(0.0, 0.0, 30.0), AT, UP);
+	glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)(Window_width * 0.75) / (float)Window_height, 0.1f, 100.0f);
+	glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &view[0][0]);
+	glUniformMatrix4fv(PerspectiveMatrixID, 1, GL_FALSE, &projection[0][0]);
+	DrawObjects();
 
-	// Draw Axis
-	glBindVertexArray(VAO_axis);
-	glUniform1i(FigureTypeID, Figure_Type::AXIS);
-	glLineWidth(2.0f);
-	glDrawElements(GL_LINES, Axis_Index.size(), GL_UNSIGNED_INT, 0);
+	// -- 2. Second Viewport: Orthographic from Front (Top-Right 25%) --
+	glViewport(Window_width * 0.75, Window_height / 2, Window_width * 0.25, Window_height / 2);
+	view = glm::lookAt(glm::vec3(0.0, 0.0, 30.0), AT, UP);
+	projection = glm::ortho(-15.0f, 15.0f, -15.0f, 15.0f, 0.1f, 100.0f);
+	glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &view[0][0]);
+	glUniformMatrix4fv(PerspectiveMatrixID, 1, GL_FALSE, &projection[0][0]);
+	DrawObjects();
 
-	// Draw Figures
-	for (const auto& object : g_OBJ_Objects) {
-		if (object.name == "Box") {
-			glBindVertexArray(object.VAO);
-			glm::mat4 OBJ_Transform_Matrix = glm::mat4(1.0f);
-			OBJ_Transform_Matrix = glm::translate(OBJ_Transform_Matrix, object.base_location);
-			glUniform3fv(OBJCenterOffsetID, 1, &object.center_offset[0]);
-			glUniformMatrix4fv(OBJModelTransformMatrixID, 1, GL_FALSE, &OBJ_Transform_Matrix[0][0]);
-			glUniform1i(FigureTypeID, Figure_Type::BOX);
+	// -- 3. Third Viewport: Orthographic from Side (Bottom-Right 25%) --
+	glViewport(Window_width * 0.75, 0, Window_width * 0.25, Window_height / 2);
+	view = glm::lookAt(glm::vec3(30.0, 0.0, 0.0), AT, UP);
+	projection = glm::ortho(-15.0f, 15.0f, -15.0f, 15.0f, 0.1f, 100.0f);
+	glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &view[0][0]);
+	glUniformMatrix4fv(PerspectiveMatrixID, 1, GL_FALSE, &projection[0][0]);
+	DrawObjects();
 
-			GLuint all_indices_count = object.indices.size();
-			GLuint floor_face_start = 24;   // 면 4 시작 인덱스
-			GLuint floor_indices_count = 6;  // 면 4만 (면 5는 제외)
-
-			// 바닥면(면 4) 제외하고 그리기 (면 0~3, 면 5)
-			glDrawElements(GL_TRIANGLES, floor_face_start, GL_UNSIGNED_INT, 0);
-
-			// 면 5 그리기 (고정)
-			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * 30));
-
-			// 면 4(트랩도어) 따로 그리기
-			glm::mat4 Floor_Matrix = OBJ_Transform_Matrix;
-			Floor_Matrix = glm::translate(Floor_Matrix, glm::vec3(0.0f, -3.0f, 3.0f));
-			Floor_Matrix = glm::rotate(Floor_Matrix, glm::radians(-Floor_Open_Angle), glm::vec3(1.0f, 0.0f, 0.0f));
-			Floor_Matrix = glm::translate(Floor_Matrix, glm::vec3(0.0f, 3.0f, -3.0f));
-
-			glUniformMatrix4fv(OBJModelTransformMatrixID, 1, GL_FALSE, &Floor_Matrix[0][0]);
-			glDrawElements(GL_TRIANGLES, floor_indices_count, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * floor_face_start));
-		}
-		else {
-			glBindVertexArray(object.VAO);
-			const int Figure_Type_ID =
-				(object.name.substr(0, 4) == "Cube") ? Figure_Type::CUBE :
-				(object.name.substr(0, 4) == "Ball") ? Figure_Type::BALL :
-				Figure_Type::IDK;
-
-			glm::mat4 OBJ_Transform_Matrix = glm::mat4(1.0f);
-			OBJ_Transform_Matrix = glm::translate(OBJ_Transform_Matrix, object.base_location);
-			glUniform3fv(OBJCenterOffsetID, 1, &object.center_offset[0]);
-			glUniformMatrix4fv(OBJModelTransformMatrixID, 1, GL_FALSE, &OBJ_Transform_Matrix[0][0]);
-			glUniform1i(FigureTypeID, Figure_Type_ID);
-			glDrawElements(GL_TRIANGLES, object.indices.size(), GL_UNSIGNED_INT, 0);
-		}
-	}
-	
-	// Second Viewport
-	glViewport(Window_width * 0.75, Window_height * 0.5, Window_width * 0.25, Window_height);
-	MakeStaticMatrix(Window_width * 0.25, Window_height);
-
-	// Draw Objects in Second Viewport
-	glBindVertexArray(VAO_axis);
-	glUniform1i(FigureTypeID, Figure_Type::AXIS);
-	glLineWidth(2.0f);
-	glDrawElements(GL_LINES, Axis_Index.size(), GL_UNSIGNED_INT, 0);
-
-	for (const auto& object : g_OBJ_Objects) {
-		if (object.name == "Box") {
-			glBindVertexArray(object.VAO);
-			glm::mat4 OBJ_Transform_Matrix = glm::mat4(1.0f);
-			OBJ_Transform_Matrix = glm::translate(OBJ_Transform_Matrix, object.base_location);
-			glUniform3fv(OBJCenterOffsetID, 1, &object.center_offset[0]);
-			glUniformMatrix4fv(OBJModelTransformMatrixID, 1, GL_FALSE, &OBJ_Transform_Matrix[0][0]);
-			glUniform1i(FigureTypeID, Figure_Type::BOX);
-
-			GLuint all_indices_count = object.indices.size();
-			GLuint floor_face_start = 24;
-			GLuint floor_indices_count = 6;
-
-			glDrawElements(GL_TRIANGLES, floor_face_start, GL_UNSIGNED_INT, 0);
-
-			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * 30));
-
-			glm::mat4 Floor_Matrix = OBJ_Transform_Matrix;
-			Floor_Matrix = glm::translate(Floor_Matrix, glm::vec3(0.0f, -3.0f, 3.0f));
-			Floor_Matrix = glm::rotate(Floor_Matrix, glm::radians(-Floor_Open_Angle), glm::vec3(1.0f, 0.0f, 0.0f));
-			Floor_Matrix = glm::translate(Floor_Matrix, glm::vec3(0.0f, 3.0f, -3.0f));
-
-			glUniformMatrix4fv(OBJModelTransformMatrixID, 1, GL_FALSE, &Floor_Matrix[0][0]);
-			glDrawElements(GL_TRIANGLES, floor_indices_count, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * floor_face_start));
-		}
-		else {
-			glBindVertexArray(object.VAO);
-			const int Figure_Type_ID =
-				(object.name.substr(0, 4) == "Cube") ? Figure_Type::CUBE :
-				(object.name.substr(0, 4) == "Ball") ? Figure_Type::BALL :
-				Figure_Type::IDK;
-
-			glm::mat4 OBJ_Transform_Matrix = glm::mat4(1.0f);
-			OBJ_Transform_Matrix = glm::translate(OBJ_Transform_Matrix, object.base_location);
-			glUniform3fv(OBJCenterOffsetID, 1, &object.center_offset[0]);
-			glUniformMatrix4fv(OBJModelTransformMatrixID, 1, GL_FALSE, &OBJ_Transform_Matrix[0][0]);
-			glUniform1i(FigureTypeID, Figure_Type_ID);
-			glDrawElements(GL_TRIANGLES, object.indices.size(), GL_UNSIGNED_INT, 0);
-		}
-	}
-
-	// Third Viewport
-	glViewport(Window_width * 0.75, 0, Window_width * 0.25, Window_height * 0.5f);
-	MakeStaticMatrix(Window_width * 0.25f, Window_height * 0.5f);
-
-	// Draw Objects in Third Viewport
-	glBindVertexArray(VAO_axis);
-	glUniform1i(FigureTypeID, Figure_Type::AXIS);
-	glLineWidth(2.0f);
-	glDrawElements(GL_LINES, Axis_Index.size(), GL_UNSIGNED_INT, 0);
-
-	for (const auto& object : g_OBJ_Objects) {
-		if (object.name == "Box") {
-			glBindVertexArray(object.VAO);
-			glm::mat4 OBJ_Transform_Matrix = glm::mat4(1.0f);
-			OBJ_Transform_Matrix = glm::translate(OBJ_Transform_Matrix, object.base_location);
-			glUniform3fv(OBJCenterOffsetID, 1, &object.center_offset[0]);
-			glUniformMatrix4fv(OBJModelTransformMatrixID, 1, GL_FALSE, &OBJ_Transform_Matrix[0][0]);
-			glUniform1i(FigureTypeID, Figure_Type::BOX);
-
-			GLuint all_indices_count = object.indices.size();
-			GLuint floor_face_start = 24;
-			GLuint floor_indices_count = 6;
-
-			glDrawElements(GL_TRIANGLES, floor_face_start, GL_UNSIGNED_INT, 0);
-
-			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * 30));
-
-			glm::mat4 Floor_Matrix = OBJ_Transform_Matrix;
-			Floor_Matrix = glm::translate(Floor_Matrix, glm::vec3(0.0f, -3.0f, 3.0f));
-			Floor_Matrix = glm::rotate(Floor_Matrix, glm::radians(-Floor_Open_Angle), glm::vec3(1.0f, 0.0f, 0.0f));
-			Floor_Matrix = glm::translate(Floor_Matrix, glm::vec3(0.0f, 3.0f, -3.0f));
-
-			glUniformMatrix4fv(OBJModelTransformMatrixID, 1, GL_FALSE, &Floor_Matrix[0][0]);
-			glDrawElements(GL_TRIANGLES, floor_indices_count, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * floor_face_start));
-		}
-		else {
-			glBindVertexArray(object.VAO);
-			const int Figure_Type_ID =
-				(object.name.substr(0, 4) == "Cube") ? Figure_Type::CUBE :
-				(object.name.substr(0, 4) == "Ball") ? Figure_Type::BALL :
-				Figure_Type::IDK;
-
-			glm::mat4 OBJ_Transform_Matrix = glm::mat4(1.0f);
-			OBJ_Transform_Matrix = glm::translate(OBJ_Transform_Matrix, object.base_location);
-			glUniform3fv(OBJCenterOffsetID, 1, &object.center_offset[0]);
-			glUniformMatrix4fv(OBJModelTransformMatrixID, 1, GL_FALSE, &OBJ_Transform_Matrix[0][0]);
-			glUniform1i(FigureTypeID, Figure_Type_ID);
-			glDrawElements(GL_TRIANGLES, object.indices.size(), GL_UNSIGNED_INT, 0);
-		}
-	}
 
 	glBindVertexArray(0);
-
 	glutSwapBuffers();
 }
 GLvoid Reshape(int w, int h) {
 	MakeStaticMatrix();
 	glUniformMatrix4fv(PerspectiveMatrixID, 1, GL_FALSE, &Perspective_Matrix[0][0]);
+}
+void DrawObjects() {
+	glBindVertexArray(VAO_axis);
+	glUniform1i(FigureTypeID, Figure_Type::AXIS);
+	glLineWidth(2.0f);
+	glDrawElements(GL_LINES, Axis_Index.size(), GL_UNSIGNED_INT, 0);
+
+	for (const auto& object : g_OBJ_Objects) {
+		if (object.name == "Box") {
+			glBindVertexArray(object.VAO);
+			glm::mat4 OBJ_Transform_Matrix = glm::mat4(1.0f);
+			OBJ_Transform_Matrix = glm::translate(OBJ_Transform_Matrix, object.base_location);
+			glUniform3fv(OBJCenterOffsetID, 1, &object.center_offset[0]);
+			glUniformMatrix4fv(OBJModelTransformMatrixID, 1, GL_FALSE, &OBJ_Transform_Matrix[0][0]);
+			glUniform1i(FigureTypeID, Figure_Type::BOX);
+
+			GLuint all_indices_count = object.indices.size();
+			GLuint floor_face_start = 24;
+			GLuint floor_indices_count = 6;
+
+			glDrawElements(GL_TRIANGLES, floor_face_start, GL_UNSIGNED_INT, 0);
+
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * 30));
+
+			glm::mat4 Floor_Matrix = OBJ_Transform_Matrix;
+			Floor_Matrix = glm::translate(Floor_Matrix, glm::vec3(0.0f, -3.0f, 3.0f));
+			Floor_Matrix = glm::rotate(Floor_Matrix, glm::radians(-Floor_Open_Angle), glm::vec3(1.0f, 0.0f, 0.0f));
+			Floor_Matrix = glm::translate(Floor_Matrix, glm::vec3(0.0f, 3.0f, -3.0f));
+
+			glUniformMatrix4fv(OBJModelTransformMatrixID, 1, GL_FALSE, &Floor_Matrix[0][0]);
+			glDrawElements(GL_TRIANGLES, floor_indices_count, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * floor_face_start));
+		}
+		else {
+			glBindVertexArray(object.VAO);
+			const int Figure_Type_ID =
+				(object.name.substr(0, 4) == "Cube") ? Figure_Type::CUBE :
+				(object.name.substr(0, 4) == "Ball") ? Figure_Type::BALL :
+				Figure_Type::IDK;
+
+			glm::mat4 OBJ_Transform_Matrix = glm::mat4(1.0f);
+			OBJ_Transform_Matrix = glm::translate(OBJ_Transform_Matrix, object.base_location);
+			glUniform3fv(OBJCenterOffsetID, 1, &object.center_offset[0]);
+			glUniformMatrix4fv(OBJModelTransformMatrixID, 1, GL_FALSE, &OBJ_Transform_Matrix[0][0]);
+			glUniform1i(FigureTypeID, Figure_Type_ID);
+			glDrawElements(GL_TRIANGLES, object.indices.size(), GL_UNSIGNED_INT, 0);
+		}
+	}
 }
 
 void KeyBoard(unsigned char key, int x, int y) {

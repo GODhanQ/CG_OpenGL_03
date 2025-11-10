@@ -100,6 +100,7 @@ extern float Floor_Open_Angle, Floor_Open_Angle_Factor;
 
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);
+void DrawObjects();
 
 void KeyBoard(unsigned char key, int x, int y);
 void SpecialKeyBoard(int key, int x, int y);
