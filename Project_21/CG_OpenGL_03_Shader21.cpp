@@ -210,6 +210,7 @@ void KeyBoard(unsigned char key, int x, int y) {
 	case 'k':
 		Open_Floor = !Open_Floor;
 
+		std::cout << "Open Floor: " << (Open_Floor ? "True" : "False") << "\n";
 		break;
 	case 'q':
 		exit(0);
@@ -263,15 +264,14 @@ void MousePassiveMotion(int x, int y) {
 	Mouse_X = x;
 	Mouse_Y = y;
 
-	// 원하는 로직 추가
 	if (x < 0.25 * Window_width) {
 		if (Box_Rotate_Sum > -60.0f) {
-			Box_Rotate_Factor -= 0.003f;
+			Box_Rotate_Factor -= 0.03f;
 		}
 	}
 	else if (x > 0.75 * Window_width) {
 		if (Box_Rotate_Sum < 60.0f) {
-			Box_Rotate_Factor += 0.003f;
+			Box_Rotate_Factor += 0.03f;
 		}
 	}
 	else {
@@ -306,7 +306,6 @@ void INIT_BUFFER() {
 
 	for (auto& file : g_OBJ_Files) {
 		for (auto& object : file.objects) {
-			//if (!(object.name == "Box" || object.name == "Cube_3" || object.name == "Ball_1")) continue;
 			g_OBJ_Objects.push_back(object);
 		}
 	}
@@ -450,7 +449,6 @@ bool ReadObj(const std::string& path, OBJ_File& outFile) {
 		}
 		else if (strcmp(lineHeader, "f") == 0) {
 			if (currentObject == nullptr) {
-				// 'o' 태그 없이 'f'가 먼저 나오는 경우를 대비해 기본 객체 생성
 				outFile.objects.emplace_back();
 				currentObject = &outFile.objects.back();
 				currentObject->name = "default_object";
@@ -467,9 +465,6 @@ bool ReadObj(const std::string& path, OBJ_File& outFile) {
 				for (int i = 0; i < count; ++i) {
 					Vertex_glm vertex;
 					vertex.position = temp_vertices[vertexIndex[i] - 1];
-					// UV, Normal 정보가 있다면 여기에 추가할 수 있습니다.
-					// vertex.uv = temp_uvs[uvIndex[i] - 1];
-					// vertex.normal = temp_normals[normalIndex[i] - 1];
 					vertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
 
 					currentObject->vertices.push_back(vertex);
@@ -477,10 +472,10 @@ bool ReadObj(const std::string& path, OBJ_File& outFile) {
 				}
 				};
 
-			if (matches == 9) { // 삼각형
+			if (matches == 9) {
 				processFace(3);
 			}
-			else if (matches == 12) { // 사각형 -> 삼각형 2개로 분할
+			else if (matches == 12) {
 				unsigned int v_indices[] = { 0, 1, 2, 0, 2, 3 };
 				for (int i = 0; i < 6; ++i) {
 					int idx = v_indices[i];
@@ -492,13 +487,11 @@ bool ReadObj(const std::string& path, OBJ_File& outFile) {
 				}
 			}
 			else {
-				// 다른 형식의 면 데이터는 현재 지원하지 않음
 				char buffer[1024];
-				fgets(buffer, 1024, file); // 해당 라인의 나머지를 읽고 무시
+				fgets(buffer, 1024, file);
 			}
 		}
 		else {
-			// 주석 또는 지원되지 않는 라인 스킵
 			char buffer[1024];
 			fgets(buffer, 1024, file);
 		}
@@ -513,7 +506,6 @@ bool ReadObj(const std::string& path, OBJ_File& outFile) {
 			continue;
 		}
 
-		// 바운딩박스 계산
 		glm::vec3 minBounds = object.vertices[0].position;
 		glm::vec3 maxBounds = object.vertices[0].position;
 
@@ -522,14 +514,11 @@ bool ReadObj(const std::string& path, OBJ_File& outFile) {
 			maxBounds = glm::max(maxBounds, vertex.position);
 		}
 
-		// 바운딩박스의 중심 계산 (로컬 좌표)
 		glm::vec3 boxCenter = (minBounds + maxBounds) * 0.5f;
-		object.center_offset = boxCenter;  // 모델의 로컬 중심 오프셋 저장
+		object.center_offset = boxCenter;
 
-		// 바운딩박스의 크기
 		glm::vec3 boxSize = maxBounds - minBounds;
 
-		// 충돌 반지름 = 바운딩박스 대각선의 절반
 		float diagonal = glm::length(boxSize);
 		object.collision_radius = diagonal * 0.5f;
 
