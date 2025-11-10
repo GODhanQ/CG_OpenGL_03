@@ -1,6 +1,6 @@
 #include "VarANDFunc_03_Shader23.h"
 
-GLint Window_width{ 800 }, Window_height{ 800 };
+GLint Window_width{ 1400 }, Window_height{ 700 };
 
 GLuint shaderProgramID{}, vertexShader{}, fragmentShader{};
 
@@ -8,6 +8,7 @@ GLuint VBO_axis{}, VAO_axis{}, IBO_axis{};
 
 glm::vec3 EYE(0.0, 0.0, 30.0), AT(0.0, 0.0, 0.0), UP(0.0, 1.0, 0.0);
 GLuint PerspectiveMatrixID{}, ViewMatrixID;
+float FOV{ 45.0f }, Aspect_Ratio{ (float)Window_width / (float)Window_height }, NearClip{ 0.1f }, FarClip{ 100.0f };
 
 GLuint FigureTypeID{};
 GLuint ModelMatrixID{};
@@ -23,10 +24,11 @@ glm::vec3 Model_Transform(0.0f, 0.0f, 0.0f), Model_Rotation(0.0f, 0.0f, 0.0f);
 
 float Max_Camera_Revolution_Angle{ 60.0f }, Camera_Revolution_Factor{ 0.03f }, Camera_Revolution_Sum{ 0.0f };
 
+
 int Mouse_X = 0, Mouse_Y = 0;
 
 bool Open_Floor{ false };
-float Floor_Open_Angle{ 0.0f }, Floor_Open_Angle_Factor{ 0.03f };
+float Floor_Open_Angle{ 0.0f }, Floor_Open_Angle_Factor{ 0.3f };
 
 std::vector<Vertex_glm> Axis_Vertex = {
 	// Positions					// Colors

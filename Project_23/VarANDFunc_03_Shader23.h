@@ -34,13 +34,13 @@ struct Vertex_glm {
 };
 
 struct Plane {
-	glm::vec3 normal;      // Æò¸éÀÇ ¹ý¼± º¤ÅÍ
-	glm::vec3 point;       // Æò¸é À§ÀÇ ÇÑ Á¡
+	glm::vec3 normal;      // ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+	glm::vec3 point;       // ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½
 
 	Plane() : normal(0.0f), point(0.0f) {}
 	Plane(glm::vec3 n, glm::vec3 p) : normal(glm::normalize(n)), point(p) {}
 
-	// Á¡¿¡¼­ Æò¸é±îÁöÀÇ ºÎÈ£ÀÖ´Â °Å¸®
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È£ï¿½Ö´ï¿½ ï¿½Å¸ï¿½
 	float getSignedDistance(const glm::vec3& pos) const {
 		return glm::dot(normal, pos - point);
 	}
@@ -55,8 +55,8 @@ struct Custom_OBJ {
 	glm::vec3 base_location{};
 	float collision_radius{ 0.5f };
 	glm::vec3 center_offset{};
-	glm::vec3 rotation_axis{};      // È¸ÀüÃà
-	float rotation_angle{ 0.0f };   // È¸Àü°¢µµ
+	glm::vec3 rotation_axis{};
+	float rotation_angle{ 0.0f };
 };
 
 struct OBJ_File {
@@ -75,7 +75,7 @@ extern std::vector<unsigned int> Axis_Index;
 extern glm::vec3 EYE, AT, UP;
 extern GLuint PerspectiveMatrixID, ViewMatrixID;
 extern float Camera_Rotation_Sum, Camera_Rotation_Factor, Camera_Revolution_Sum, Camera_Revolution_Factor;
-
+extern float FOV, Aspect_Ratio, NearClip, FarClip;
 
 extern GLuint FigureTypeID;
 // for all models
