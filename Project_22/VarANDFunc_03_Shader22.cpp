@@ -44,7 +44,7 @@ float Leg_Rotation_Speed{ 5.0f };
 bool LookAtRobot{ false };
 
 bool OpenDoor{ false };
-float Door_Open_Progress{ 0.0f }, doorAnimationSpeed{ 2.0f }, doorSlideHeight{ 5.0f };
+float Door_Open_Progress{ 0.0f }, doorAnimationSpeed{ 2.0f }, doorSlideHeight{ 25.0f };
 GLuint DoorMatrixID{};
 
 
@@ -128,9 +128,17 @@ bool CheckCollision(const AABB& a, const AABB& b) {
 		(a.min.z <= b.max.z && a.max.z >= b.min.z);
 }
 
+
 // inner AABB가 outer AABB 내부에 완전히 포함되는지 확인합니다.
 bool IsAABBInside(const AABB& inner, const AABB& outer) {
 	return (inner.min.x >= outer.min.x && inner.max.x <= outer.max.x) &&
 		(inner.min.y >= outer.min.y && inner.max.y <= outer.max.y) &&
 		(inner.min.z >= outer.min.z && inner.max.z <= outer.max.z);
+}
+
+
+bool CheckAABBCollision(const AABB& a, const AABB& b) {
+	return (a.min.x <= b.max.x && a.max.x >= b.min.x) &&
+		(a.min.y <= b.max.y && a.max.y >= b.min.y) &&
+		(a.min.z <= b.max.z && a.max.z >= b.min.z);
 }

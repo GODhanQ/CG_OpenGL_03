@@ -103,11 +103,20 @@ GLvoid drawScene() {
 		for (const auto& object : file.objects) {
 			glBindVertexArray(object.VAO);
 
-			GLuint Figure_Type;
-			Type_distinction(object.name, Figure_Type);
-			glUniform1i(FigureTypeID, Figure_Type);
+			if (object.name == "Box") {
+				glUniform1i(FigureTypeID, Figure_Type::BOX_WALL);
+				glDrawElements(GL_TRIANGLES, 18, GL_UNSIGNED_INT, 0);
+				glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * 24));
+				glUniform1i(FigureTypeID, Figure_Type::BOX_DOOR);
+				glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * 18));
+			}
+			else {
+				GLuint Figure_Type;
+				Type_distinction(object.name, Figure_Type);
+				glUniform1i(FigureTypeID, Figure_Type);
 
-			glDrawElements(GL_TRIANGLES, object.indices.size(), GL_UNSIGNED_INT, 0);
+				glDrawElements(GL_TRIANGLES, object.indices.size(), GL_UNSIGNED_INT, 0);
+			}
 		}
 	}
 
@@ -134,11 +143,20 @@ GLvoid drawScene() {
 		for (const auto& object : file.objects) {
 			glBindVertexArray(object.VAO);
 
-			GLuint Figure_Type;
-			Type_distinction(object.name, Figure_Type);
-			glUniform1i(FigureTypeID, Figure_Type);
+			if (object.name == "Box") {
+				glUniform1i(FigureTypeID, Figure_Type::BOX_WALL);
+				glDrawElements(GL_TRIANGLES, 18, GL_UNSIGNED_INT, 0);
+				glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * 24));
+				glUniform1i(FigureTypeID, Figure_Type::BOX_DOOR);
+				glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * 18));
+			}
+			else {
+				GLuint Figure_Type;
+				Type_distinction(object.name, Figure_Type);
+				glUniform1i(FigureTypeID, Figure_Type);
 
-			glDrawElements(GL_TRIANGLES, object.indices.size(), GL_UNSIGNED_INT, 0);
+				glDrawElements(GL_TRIANGLES, object.indices.size(), GL_UNSIGNED_INT, 0);
+			}
 		}
 	}
 
@@ -352,8 +370,26 @@ void INIT_BUFFER() {
 
 			std::cout << "  L  Buffered Object: " << object.name << ", VAO: " << object.VAO << "\n";
 			
-			g_LocalAABBs[object.name] = CalculateAABB(object.vertices);
-			std::cout << "     Calculated AABB for " << object.name << "\n";
+			if (object.name == "Box") {
+				std::vector<Vertex_glm> wall_vertices;
+				std::vector<Vertex_glm> door_vertices;
+
+				// Box의 각 면에 대한 인덱스 범위
+				// 면 0, 1, 2 (0-17) -> 벽
+				for (int i = 0; i <= 17; ++i) wall_vertices.push_back(object.vertices[object.indices[i]]);
+				// 면 3 (18-23) -> 문
+				for (int i = 18; i <= 23; ++i) door_vertices.push_back(object.vertices[object.indices[i]]);
+				// 면 4, 5 (24-35) -> 벽
+				for (int i = 24; i <= 35; ++i) wall_vertices.push_back(object.vertices[object.indices[i]]);
+
+				g_LocalAABBs["Box_Wall"] = CalculateAABB(wall_vertices);
+				g_LocalAABBs["Box_Door"] = CalculateAABB(door_vertices);
+				std::cout << "     Calculated AABB for Box_Wall and Box_Door\n";
+			}
+			else {
+				g_LocalAABBs[object.name] = CalculateAABB(object.vertices);
+				std::cout << "     Calculated AABB for " << object.name << "\n";
+			}
 		}
 	}
 	glBindVertexArray(0);
@@ -643,7 +679,9 @@ void MakeDynamicMatrix() {
 	}
 
 	// 3. 충돌 감지 및 반응 (축 분리)
-	AABB boxWorldAABB = TransformAABB(g_LocalAABBs["Box"], glm::mat4(1.0f));
+	AABB wallWorldAABB = TransformAABB(g_LocalAABBs["Box_Wall"], glm::mat4(1.0f));
+	AABB doorWorldAABB = TransformAABB(g_LocalAABBs["Box_Door"], Door_Matrix);
+
 	std::vector<std::string> robot_parts = { "body", "left_arm", "right_arm", "left_leg", "right_leg" };
 
 	glm::mat4 rotationMatrix = glm::mat4_cast(Model_Orientation);
@@ -659,9 +697,17 @@ void MakeDynamicMatrix() {
 	for (const auto& part_name : robot_parts) {
 		if (g_LocalAABBs.count(part_name)) {
 			AABB robotPartWorldAABB = TransformAABB(g_LocalAABBs[part_name], nextModelMatrix_h);
-			if (!IsAABBInside(robotPartWorldAABB, boxWorldAABB)) {
-				horizontalCollision = true;
-				break;
+
+			// 로봇이 벽 내부에 있지 않다면 충돌로 간주
+			if (!IsAABBInside(robotPartWorldAABB, wallWorldAABB)) {
+				// 단, 문과 겹치는 경우는 통과시켜야 함 (문이 완전히 열렸을 때)
+				if (OpenDoor && Door_Open_Progress > 0.9f && CheckAABBCollision(robotPartWorldAABB, doorWorldAABB)) {
+					// 문이 열려있고, 로봇이 문 영역과 겹치면 충돌이 아님
+				}
+				else {
+					horizontalCollision = true;
+					break;
+				}
 			}
 		}
 	}
@@ -680,7 +726,9 @@ void MakeDynamicMatrix() {
 	for (const auto& part_name : robot_parts) {
 		if (g_LocalAABBs.count(part_name)) {
 			AABB robotPartWorldAABB = TransformAABB(g_LocalAABBs[part_name], nextModelMatrix_v);
-			if (!IsAABBInside(robotPartWorldAABB, boxWorldAABB)) {
+
+			// 로봇이 벽 내부에 있지 않다면 충돌로 간주
+			if (!IsAABBInside(robotPartWorldAABB, wallWorldAABB)) {
 				verticalCollision = true;
 				break;
 			}
@@ -689,17 +737,29 @@ void MakeDynamicMatrix() {
 
 	if (verticalCollision) {
 		if (Model_Velocity.y < 0) {
-			Model_Transform.y = boxWorldAABB.min.y - (g_LocalAABBs["left_leg"].min.y * Model_Scale.y);
+			// 바닥에 닿았을 때 처리
+			Model_Transform.y = wallWorldAABB.min.y - (g_LocalAABBs["left_leg"].min.y * Model_Scale.y);
 			Model_Velocity.y = 0;
 			is_Jumping = false;
 		}
 		else if (Model_Velocity.y > 0) {
+			// 천장에 닿았을 때 처리
 			Model_Velocity.y = 0;
 		}
 	}
 	else {
 		Model_Transform = next_pos_v;
-		is_Jumping = true;
+		if (Model_Transform.y > wallWorldAABB.min.y - (g_LocalAABBs["left_leg"].min.y * Model_Scale.y) + 0.1f) {
+			is_Jumping = true;
+		}
+	}
+
+	if (!is_Jumping) {
+		AABB robotFeetAABB = TransformAABB(g_LocalAABBs["left_leg"], Model_Matrix);
+		if (robotFeetAABB.min.y < wallWorldAABB.min.y) {
+			Model_Transform.y = wallWorldAABB.min.y - (g_LocalAABBs["left_leg"].min.y * Model_Scale.y);
+			Model_Velocity.y = 0;
+		}
 	}
 
 	rotationMatrix = glm::mat4_cast(Model_Orientation);

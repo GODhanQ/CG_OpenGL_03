@@ -137,3 +137,4 @@ AABB CalculateAABB(const std::vector<Vertex_glm>& vertices);
 AABB TransformAABB(const AABB& aabb, const glm::mat4& transform);
 bool CheckCollision(const AABB& a, const AABB& b);
 bool IsAABBInside(const AABB& inner, const AABB& outer);
+bool CheckAABBCollision(const AABB& a, const AABB& b);
