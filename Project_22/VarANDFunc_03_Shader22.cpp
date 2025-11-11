@@ -43,6 +43,13 @@ float Leg_Rotation_Speed{ 5.0f };
 
 bool LookAtRobot{ false };
 
+bool OpenDoor{ false };
+float Door_Open_Progress{ 0.0f }, doorAnimationSpeed{ 2.0f }, doorSlideHeight{ 5.0f };
+GLuint DoorMatrixID{};
+
+
+
+
 std::vector<Vertex_glm> Axis_Vertex = {
 	// Positions					// Colors
 	{ glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f) }, // X axis - Red

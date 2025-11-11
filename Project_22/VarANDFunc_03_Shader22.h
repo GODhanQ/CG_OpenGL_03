@@ -34,6 +34,8 @@ namespace Figure_Type {
 	const int RIGHT_LEG = 4;
 
 	const int BOX = 50;
+	const int BOX_DOOR = 51;
+	const int BOX_WALL = 52;
 
 	const int ETC = 99;
 }
@@ -100,6 +102,10 @@ extern glm::vec3 Leg_Offset, Leg_Rotation_Angle;
 extern float Leg_Rotation_Speed;
 
 extern bool LookAtRobot;
+
+extern bool OpenDoor;
+extern float Door_Open_Progress, doorAnimationSpeed, doorSlideHeight;
+extern GLuint DoorMatrixID;
 
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);

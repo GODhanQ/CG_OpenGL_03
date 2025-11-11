@@ -11,9 +11,10 @@ glm::mat4 Model_Matrix(1.0f);
 glm::mat4 Body_Matrix(1.0f);
 glm::mat4 LeftArm_Matrix(1.0f), RightArm_Matrix(1.0f);
 glm::mat4 LeftLeg_Matrix(1.0f), RightLeg_Matrix(1.0f);
+glm::mat4 Door_Matrix(1.0f);
 
 std::vector<OBJ_File> g_OBJ_Files;
-std::map<std::string, AABB> g_LocalAABBs; // 객체별 로컬 AABB 저장
+std::map<std::string, AABB> g_LocalAABBs;
 
 
 int main(int argc, char** argv)
@@ -97,6 +98,7 @@ GLvoid drawScene() {
 	glDrawElements(GL_LINES, Axis_Index.size(), GL_UNSIGNED_INT, 0);
 
 	// Draw OBJ Models
+	int box_face_count = 0;
 	for (const auto& file : g_OBJ_Files) {
 		for (const auto& object : file.objects) {
 			glBindVertexArray(object.VAO);
@@ -127,6 +129,7 @@ GLvoid drawScene() {
 	glDrawElements(GL_LINES, Axis_Index.size(), GL_UNSIGNED_INT, 0);
 
 	// Draw OBJ Models
+	box_face_count = 0;
 	for (const auto& file : g_OBJ_Files) {
 		for (const auto& object : file.objects) {
 			glBindVertexArray(object.VAO);
@@ -199,6 +202,7 @@ void KeyBoard(unsigned char key, int x, int y) {
 		Animation_Time = 0.0f;
 		Animation_Speed = 10.0f;
 		EYE = glm::vec3(0.0f, 20.0f, 40.0f);
+		AT = glm::vec3(0.0f, 5.0f, 0.0f);
 		is_Jumping = false;
 		std::cout << "Reset All Parameters\n";
 		break;
@@ -233,6 +237,16 @@ void KeyBoard(unsigned char key, int x, int y) {
 
 		break;
 
+	case 'o':
+		OpenDoor = !OpenDoor;
+
+		std::cout << "OpenDoor: " << (OpenDoor ? "True" : "False") << "\n";
+		break;
+	case 'O':
+		AT = glm::vec3(0.0f, 50.0f, 0.0f);
+
+		std::cout << "Camera AT set to Top-down View\n";
+		break;
 	case 'q':
 		exit(0);
 
@@ -338,7 +352,6 @@ void INIT_BUFFER() {
 
 			std::cout << "  L  Buffered Object: " << object.name << ", VAO: " << object.VAO << "\n";
 			
-			// 각 객체의 로컬 AABB 계산 및 저장
 			g_LocalAABBs[object.name] = CalculateAABB(object.vertices);
 			std::cout << "     Calculated AABB for " << object.name << "\n";
 		}
@@ -449,6 +462,7 @@ bool ReadObj(const std::string& path, OBJ_File& outFile) {
 	}
 
 	Custom_OBJ* currentObject = nullptr;
+	int faceCount = 0;
 
 	while (1) {
 		char lineHeader[128];
@@ -486,6 +500,32 @@ bool ReadObj(const std::string& path, OBJ_File& outFile) {
 				currentObject = &outFile.objects.back();
 				currentObject->name = "default_object";
 			}
+
+			/*
+			// Box 객체의 면을 분리하기 위한 로직
+			if (currentObject->name == "Box") {
+				// 5번째 면(+Z)을 문으로, 나머지를 벽으로 처리
+				std::string newObjectName = (faceCount == 4) ? "Box_Door" : "Box_Wall";
+
+				// 해당 이름의 객체가 이미 있는지 확인
+				bool objectExists = false;
+				for (auto& obj : outFile.objects) {
+					if (obj.name == newObjectName) {
+						currentObject = &obj;
+						objectExists = true;
+						break;
+					}
+				}
+
+				// 객체가 없으면 새로 생성
+				if (!objectExists) {
+					outFile.objects.emplace_back();
+					currentObject = &outFile.objects.back();
+					currentObject->name = newObjectName;
+				}
+				faceCount++;
+			}
+			*/
 
 			unsigned int vertexIndex[4], uvIndex[4], normalIndex[4];
 			int matches = fscanf(file, "%d/%d/%d %d/%d/%d %d/%d/%d %d/%d/%d\n",
@@ -565,6 +605,19 @@ void MakeDynamicMatrix() {
 
 	View_Matrix = glm::lookAt(EYE, AT, UP);
 
+	// Box Door Animation
+	if (OpenDoor) {
+		Door_Open_Progress += doorAnimationSpeed * deltaTime;
+	}
+	else {
+		Door_Open_Progress -= doorAnimationSpeed * deltaTime;
+	}
+	Door_Open_Progress = glm::clamp(Door_Open_Progress, 0.0f, 1.0f);
+
+	glm::vec3 doorSlideOffset = glm::vec3(0.0f, doorSlideHeight * Door_Open_Progress, 0.0f);
+	Door_Matrix = glm::translate(glm::mat4(1.0f), doorSlideOffset);
+
+
 	// 1. 중력 적용
 	Model_Velocity.y -= GRAVITY * deltaTime;
 
@@ -606,7 +659,6 @@ void MakeDynamicMatrix() {
 	for (const auto& part_name : robot_parts) {
 		if (g_LocalAABBs.count(part_name)) {
 			AABB robotPartWorldAABB = TransformAABB(g_LocalAABBs[part_name], nextModelMatrix_h);
-			// 로봇의 다음 위치가 Box 내부에 있지 않다면 충돌로 간주
 			if (!IsAABBInside(robotPartWorldAABB, boxWorldAABB)) {
 				horizontalCollision = true;
 				break;
@@ -628,7 +680,6 @@ void MakeDynamicMatrix() {
 	for (const auto& part_name : robot_parts) {
 		if (g_LocalAABBs.count(part_name)) {
 			AABB robotPartWorldAABB = TransformAABB(g_LocalAABBs[part_name], nextModelMatrix_v);
-			// 로봇의 다음 위치가 Box 내부에 있지 않다면 충돌로 간주
 			if (!IsAABBInside(robotPartWorldAABB, boxWorldAABB)) {
 				verticalCollision = true;
 				break;
@@ -637,13 +688,12 @@ void MakeDynamicMatrix() {
 	}
 
 	if (verticalCollision) {
-		// 바닥 또는 천장과 충돌
-		if (Model_Velocity.y < 0) { // 바닥
-			Model_Transform.y = boxWorldAABB.min.y - (g_LocalAABBs["left_leg"].min.y * Model_Scale.y); // 발바닥 맞춤
+		if (Model_Velocity.y < 0) {
+			Model_Transform.y = boxWorldAABB.min.y - (g_LocalAABBs["left_leg"].min.y * Model_Scale.y);
 			Model_Velocity.y = 0;
 			is_Jumping = false;
 		}
-		else if (Model_Velocity.y > 0) { // 천장
+		else if (Model_Velocity.y > 0) {
 			Model_Velocity.y = 0;
 		}
 	}
@@ -679,6 +729,8 @@ void MakeDynamicMatrix() {
 	RightLeg_Matrix = glm::translate(glm::mat4(1.0f), glm::vec3(-Leg_Offset.x, Leg_Offset.y, Leg_Offset.z));
 	RightLeg_Matrix = glm::rotate(RightLeg_Matrix, glm::radians(-Leg_Rotation_Angle.x), glm::vec3(1.0f, 0.0f, 0.0f));
 	RightLeg_Matrix = glm::translate(RightLeg_Matrix, -glm::vec3(-Leg_Offset.x, Leg_Offset.y, Leg_Offset.z));
+
+
 }
 
 void GetUniformLocations() {
@@ -691,6 +743,7 @@ void GetUniformLocations() {
 	RightArmMatrixID = glGetUniformLocation(shaderProgramID, "RightArm_Matrix");
 	LeftLegMatrixID = glGetUniformLocation(shaderProgramID, "LeftLeg_Matrix");
 	RightLegMatrixID = glGetUniformLocation(shaderProgramID, "RightLeg_Matrix");
+	DoorMatrixID = glGetUniformLocation(shaderProgramID, "Door_Matrix");
 
 	// dynamic uniform variable
 	FigureTypeID = glGetUniformLocation(shaderProgramID, "Figure_Type");
@@ -704,6 +757,7 @@ void UpdateUniformMatrices() {
 	glUniformMatrix4fv(RightArmMatrixID, 1, GL_FALSE, &RightArm_Matrix[0][0]);
 	glUniformMatrix4fv(LeftLegMatrixID, 1, GL_FALSE, &LeftLeg_Matrix[0][0]);
 	glUniformMatrix4fv(RightLegMatrixID, 1, GL_FALSE, &RightLeg_Matrix[0][0]);
+	glUniformMatrix4fv(DoorMatrixID, 1, GL_FALSE, &Door_Matrix[0][0]);
 
 	if (PerspectiveMatrixID == -1) std::cerr << "Could not bind uniform Perspective_Matrix\n";
 	if (ViewMatrixID == -1) std::cerr << "Could not bind uniform View_Matrix\n";
@@ -713,6 +767,7 @@ void UpdateUniformMatrices() {
 	if (RightArmMatrixID == -1) std::cerr << "Could not bind uniform RightArm_Matrix\n";
 	if (LeftLegMatrixID == -1) std::cerr << "Could not bind uniform LeftLeg_Matrix\n";
 	if (RightLegMatrixID == -1) std::cerr << "Could not bind uniform RightLeg_Matrix\n";
+	if (DoorMatrixID == -1) std::cerr << "Could not bind uniform Door_Matrix\n";
 
 }
 void ComposeOBJColor() {
@@ -723,7 +778,7 @@ void ComposeOBJColor() {
 					glm::vec3(0.6f, 0.6f, 0.6f),
 					glm::vec3(0.2f, 0.2f, 0.2f),
 					glm::vec3(0.6f, 0.6f, 0.6f),
-					glm::vec3(0.2f, 0.2f, 0.2f),
+					glm::vec3(0.8f, 0.2f, 0.2f),	// Door face in red
 					glm::vec3(0.4f, 0.4f, 0.4f),
 					glm::vec3(0.4f, 0.4f, 0.4f)
 				};
@@ -780,8 +835,11 @@ void Type_distinction(const std::string& object_name, GLuint& outTypeID) {
 	else if (object_name == "right_leg") {
 		outTypeID = Figure_Type::RIGHT_LEG;
 	}
-	else if (object_name == "Box") {
-		outTypeID = Figure_Type::BOX;
+	else if (object_name == "Box_Door") {
+		outTypeID = Figure_Type::BOX_DOOR;
+	}
+	else if (object_name == "Box_Wall") {
+		outTypeID = Figure_Type::BOX_WALL;
 	}
 	else {
 		outTypeID = Figure_Type::ETC;

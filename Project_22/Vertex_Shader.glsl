@@ -9,6 +9,11 @@ uniform mat4 Model_Matrix;
 uniform mat4 Body_Matrix;
 uniform mat4 LeftArm_Matrix, RightArm_Matrix;
 uniform mat4 LeftLeg_Matrix, RightLeg_Matrix;
+uniform mat4 Door_Matrix;
+
+const int BOX_WALL = 5;
+const int BOX_DOOR = 6;
+const int ETC = 7;
 
 out vec3 out_color;
 
@@ -37,6 +42,10 @@ void main()
 
         
         aPos = Model_Matrix * aPos;
+    }
+
+    if (Figure_Type == 51) {
+        aPos = Door_Matrix * aPos;
     }
 
     gl_Position = Perspective_Matrix * View_Matrix * aPos;
