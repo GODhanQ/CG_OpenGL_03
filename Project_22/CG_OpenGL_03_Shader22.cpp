@@ -14,7 +14,7 @@ glm::mat4 LeftLeg_Matrix(1.0f), RightLeg_Matrix(1.0f);
 glm::mat4 Door_Matrix(1.0f);
 
 std::vector<OBJ_File> g_OBJ_Files;
-std::map<std::string, AABB> g_LocalAABBs;
+std::map<std::string, AABB> g_LocalAABBs; // 객체별 로컬 AABB 저장
 
 
 int main(int argc, char** argv)
@@ -191,7 +191,9 @@ void KeyBoard(unsigned char key, int x, int y) {
 		Model_Movement_Factor_Scale += 5.0f;
 		Model_Movement_Factor_Scale = glm::clamp(Model_Movement_Factor_Scale, 10.0f, 50.0f);
 		Animation_Speed += 1.0f;
+		Arm_Rotation_Max_Angle += 5.0f;
 		Animation_Speed = glm::clamp(Animation_Speed, 5.0f, 15.0f);
+		Arm_Rotation_Max_Angle = glm::clamp(Arm_Rotation_Max_Angle, 60.0f, 90.0f);
 
 		std::cout << "Model_Movement_Factor_Scale: " << Model_Movement_Factor_Scale << "\n";
 		break;
@@ -199,7 +201,9 @@ void KeyBoard(unsigned char key, int x, int y) {
 		Model_Movement_Factor_Scale -= 5.0f;
 		Model_Movement_Factor_Scale = glm::clamp(Model_Movement_Factor_Scale, 10.0f, 50.0f);
 		Animation_Speed -= 1.0f;
+		Arm_Rotation_Max_Angle -= 5.0f;
 		Animation_Speed = glm::clamp(Animation_Speed, 5.0f, 15.0f);
+		Arm_Rotation_Max_Angle = glm::clamp(Arm_Rotation_Max_Angle, 60.0f, 90.0f);
 
 		std::cout << "Model_Movement_Factor_Scale: " << Model_Movement_Factor_Scale << "\n";
 		break;
@@ -208,6 +212,8 @@ void KeyBoard(unsigned char key, int x, int y) {
 			is_Jumping = true;
 			Model_Velocity.y = JUMP_FORCE;
 		}
+
+		std::cout << "Jump!" << (is_Jumping ? "in sky" : "on floor") << "\n";
 		break;
 
 	case 'i':
@@ -220,7 +226,8 @@ void KeyBoard(unsigned char key, int x, int y) {
 		Animation_Time = 0.0f;
 		Animation_Speed = 10.0f;
 		EYE = glm::vec3(0.0f, 20.0f, 40.0f);
-		AT = glm::vec3(0.0f, 5.0f, 0.0f);
+		Arm_Rotation_Max_Angle = 60.0f;
+		Leg_Rotation_Max_Angle = 60.0f;
 		is_Jumping = false;
 		std::cout << "Reset All Parameters\n";
 		break;
@@ -249,12 +256,6 @@ void KeyBoard(unsigned char key, int x, int y) {
 		Camera_Transform_Factor.z += 1.0f;
 		Camera_Transform_Factor.z = glm::clamp(Camera_Transform_Factor.z, -1.0f, 1.0f);
 		break;
-
-	case '1':
-		LookAtRobot = !LookAtRobot;
-
-		break;
-
 	case 'o':
 		OpenDoor = !OpenDoor;
 
@@ -265,6 +266,16 @@ void KeyBoard(unsigned char key, int x, int y) {
 
 		std::cout << "Camera AT set to Top-down View\n";
 		break;
+
+	case '1':
+		LookAtRobot = !LookAtRobot;
+
+		if (!LookAtRobot) {
+			AT = glm::vec3(0.0f, 5.0f, 0.0f);
+			EYE = glm::vec3(0.0f, 30.0f, 50.0f);
+		}
+		break;
+
 	case 'q':
 		exit(0);
 
@@ -336,6 +347,7 @@ void INIT_BUFFER() {
 	std::vector<std::string> obj_filenames = {
 		"Box.obj",
 		"Robot.obj",
+		"Cube.obj",
 	};
 
 	for (const auto& filename : obj_filenames) {
@@ -369,27 +381,10 @@ void INIT_BUFFER() {
 			glBufferData(GL_ELEMENT_ARRAY_BUFFER, object.indices.size() * sizeof(unsigned int), object.indices.data(), GL_STATIC_DRAW);
 
 			std::cout << "  L  Buffered Object: " << object.name << ", VAO: " << object.VAO << "\n";
-			
-			if (object.name == "Box") {
-				std::vector<Vertex_glm> wall_vertices;
-				std::vector<Vertex_glm> door_vertices;
 
-				// Box의 각 면에 대한 인덱스 범위
-				// 면 0, 1, 2 (0-17) -> 벽
-				for (int i = 0; i <= 17; ++i) wall_vertices.push_back(object.vertices[object.indices[i]]);
-				// 면 3 (18-23) -> 문
-				for (int i = 18; i <= 23; ++i) door_vertices.push_back(object.vertices[object.indices[i]]);
-				// 면 4, 5 (24-35) -> 벽
-				for (int i = 24; i <= 35; ++i) wall_vertices.push_back(object.vertices[object.indices[i]]);
-
-				g_LocalAABBs["Box_Wall"] = CalculateAABB(wall_vertices);
-				g_LocalAABBs["Box_Door"] = CalculateAABB(door_vertices);
-				std::cout << "     Calculated AABB for Box_Wall and Box_Door\n";
-			}
-			else {
-				g_LocalAABBs[object.name] = CalculateAABB(object.vertices);
-				std::cout << "     Calculated AABB for " << object.name << "\n";
-			}
+			// 각 객체의 로컬 AABB 계산 및 저장
+			g_LocalAABBs[object.name] = CalculateAABB(object.vertices);
+			std::cout << "     Calculated AABB for " << object.name << "\n";
 		}
 	}
 	glBindVertexArray(0);
@@ -498,7 +493,6 @@ bool ReadObj(const std::string& path, OBJ_File& outFile) {
 	}
 
 	Custom_OBJ* currentObject = nullptr;
-	int faceCount = 0;
 
 	while (1) {
 		char lineHeader[128];
@@ -536,32 +530,6 @@ bool ReadObj(const std::string& path, OBJ_File& outFile) {
 				currentObject = &outFile.objects.back();
 				currentObject->name = "default_object";
 			}
-
-			/*
-			// Box 객체의 면을 분리하기 위한 로직
-			if (currentObject->name == "Box") {
-				// 5번째 면(+Z)을 문으로, 나머지를 벽으로 처리
-				std::string newObjectName = (faceCount == 4) ? "Box_Door" : "Box_Wall";
-
-				// 해당 이름의 객체가 이미 있는지 확인
-				bool objectExists = false;
-				for (auto& obj : outFile.objects) {
-					if (obj.name == newObjectName) {
-						currentObject = &obj;
-						objectExists = true;
-						break;
-					}
-				}
-
-				// 객체가 없으면 새로 생성
-				if (!objectExists) {
-					outFile.objects.emplace_back();
-					currentObject = &outFile.objects.back();
-					currentObject->name = newObjectName;
-				}
-				faceCount++;
-			}
-			*/
 
 			unsigned int vertexIndex[4], uvIndex[4], normalIndex[4];
 			int matches = fscanf(file, "%d/%d/%d %d/%d/%d %d/%d/%d %d/%d/%d\n",
@@ -653,7 +621,6 @@ void MakeDynamicMatrix() {
 	glm::vec3 doorSlideOffset = glm::vec3(0.0f, doorSlideHeight * Door_Open_Progress, 0.0f);
 	Door_Matrix = glm::translate(glm::mat4(1.0f), doorSlideOffset);
 
-
 	// 1. 중력 적용
 	Model_Velocity.y -= GRAVITY * deltaTime;
 
@@ -662,8 +629,8 @@ void MakeDynamicMatrix() {
 	if (glm::length(Model_Movement_Factor) > 0.0f) {
 		// Animation
 		Animation_Time += deltaTime * Animation_Speed;
-		Arm_Rotation_Angle.x = 60.0f * sin(Animation_Time);
-		Leg_Rotation_Angle.x = 60.0f * cos(Animation_Time);
+		Arm_Rotation_Angle.x = Arm_Rotation_Max_Angle * sin(Animation_Time);
+		Leg_Rotation_Angle.x = Leg_Rotation_Max_Angle * cos(Animation_Time);
 
 		glm::vec3 move_direction = glm::normalize(Model_Movement_Factor);
 		glm::quat target_orientation = glm::quatLookAt(move_direction, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -679,13 +646,26 @@ void MakeDynamicMatrix() {
 	}
 
 	// 3. 충돌 감지 및 반응 (축 분리)
-	AABB wallWorldAABB = TransformAABB(g_LocalAABBs["Box_Wall"], glm::mat4(1.0f));
-	AABB doorWorldAABB = TransformAABB(g_LocalAABBs["Box_Door"], Door_Matrix);
+	// Box는 월드 고정(Identity)로 가정
+	AABB boxWorldAABB = TransformAABB(g_LocalAABBs["Box"], glm::mat4(1.0f));
 
+	// 로봇 파트 목록 (로봇 자체는 장애물 대상에서 제외)
 	std::vector<std::string> robot_parts = { "body", "left_arm", "right_arm", "left_leg", "right_leg" };
 
+	// 장애물 목록 구성: g_LocalAABBs의 모든 항목 중 로봇 파트는 제외 (고정 장애물, world transform = identity)
+	std::vector<std::pair<std::string, AABB>> obstacles;
+	for (const auto& kv : g_LocalAABBs) {
+		const std::string& name = kv.first;
+		if (std::find(robot_parts.begin(), robot_parts.end(), name) != robot_parts.end()) continue;
+		glm::mat4 obstacleWorldMat = glm::mat4(1.0f);
+		AABB worldAABB = TransformAABB(kv.second, obstacleWorldMat);
+		obstacles.emplace_back(name, worldAABB);
+	}
+
 	glm::mat4 rotationMatrix = glm::mat4_cast(Model_Orientation);
-	glm::mat4 correctionMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::mat4 correctionMatrix = glm::rotate(glm::mat4(1.0f),
+		glm::radians(180.0f),
+		glm::vec3(0.0f, 1.0f, 0.0f));
 
 	// 3-1. 수평 이동 (XZ)
 	glm::vec3 next_pos_h = Model_Transform + glm::vec3(horizontal_move.x, 0.0f, horizontal_move.z);
@@ -695,71 +675,76 @@ void MakeDynamicMatrix() {
 
 	bool horizontalCollision = false;
 	for (const auto& part_name : robot_parts) {
-		if (g_LocalAABBs.count(part_name)) {
-			AABB robotPartWorldAABB = TransformAABB(g_LocalAABBs[part_name], nextModelMatrix_h);
+		if (!g_LocalAABBs.count(part_name)) continue;
+		AABB robotPartWorldAABB = TransformAABB(g_LocalAABBs[part_name], nextModelMatrix_h);
 
-			// 로봇이 벽 내부에 있지 않다면 충돌로 간주
-			if (!IsAABBInside(robotPartWorldAABB, wallWorldAABB)) {
-				// 단, 문과 겹치는 경우는 통과시켜야 함 (문이 완전히 열렸을 때)
-				if (OpenDoor && Door_Open_Progress > 0.9f && CheckAABBCollision(robotPartWorldAABB, doorWorldAABB)) {
-					// 문이 열려있고, 로봇이 문 영역과 겹치면 충돌이 아님
-				}
-				else {
-					horizontalCollision = true;
-					break;
-				}
+		// (A) Box 규칙: 로봇 파트는 Box 내부에 있어야 함 — 벗어나면 충돌
+		if (!IsAABBInside(robotPartWorldAABB, boxWorldAABB)) {
+			horizontalCollision = true;
+			break;
+		}
+
+		// (B) 다른 고정 장애물과의 충돌 검사 (filled)
+		for (const auto& obs : obstacles) {
+			if (obs.first == "Box") continue;
+			if (CheckCollision(robotPartWorldAABB, obs.second)) {
+				horizontalCollision = true;
+				Model_Movement_Factor = -Model_Movement_Factor * 0.1f;
+				break;
 			}
 		}
+		if (horizontalCollision) break;
 	}
+
 	if (!horizontalCollision) {
 		Model_Transform = next_pos_h;
 	}
 
-	// 3-2. 수직 이동 (Y)
-	glm::vec3 vertical_move = glm::vec3(0.0f, Model_Velocity.y * deltaTime, 0.0f);
-	glm::vec3 next_pos_v = Model_Transform + vertical_move;
+	// 3-2. 수직 이동 (Y) — 단일 블록만 사용
+	glm::vec3 vertical_move_vec = glm::vec3(0.0f, Model_Velocity.y * deltaTime, 0.0f);
+	glm::vec3 next_pos_v = Model_Transform + vertical_move_vec;
 	glm::mat4 nextModelMatrix_v = glm::translate(glm::mat4(1.0f), next_pos_v);
 	nextModelMatrix_v = glm::scale(nextModelMatrix_v, Model_Scale);
 	nextModelMatrix_v = nextModelMatrix_v * rotationMatrix * correctionMatrix;
 
 	bool verticalCollision = false;
 	for (const auto& part_name : robot_parts) {
-		if (g_LocalAABBs.count(part_name)) {
-			AABB robotPartWorldAABB = TransformAABB(g_LocalAABBs[part_name], nextModelMatrix_v);
+		if (!g_LocalAABBs.count(part_name)) continue;
+		AABB robotPartWorldAABB = TransformAABB(g_LocalAABBs[part_name], nextModelMatrix_v);
 
-			// 로봇이 벽 내부에 있지 않다면 충돌로 간주
-			if (!IsAABBInside(robotPartWorldAABB, wallWorldAABB)) {
+		// Box 내부 체크 (원래 로직 유지)
+		if (!IsAABBInside(robotPartWorldAABB, boxWorldAABB)) {
+			verticalCollision = true;
+			break;
+		}
+
+		// 다른 장애물과의 교차 체크
+		for (const auto& obs : obstacles) {
+			if (obs.first == "Box") continue;
+			if (CheckCollision(robotPartWorldAABB, obs.second)) {
 				verticalCollision = true;
 				break;
 			}
 		}
+		if (verticalCollision) break;
 	}
 
 	if (verticalCollision) {
-		if (Model_Velocity.y < 0) {
-			// 바닥에 닿았을 때 처리
-			Model_Transform.y = wallWorldAABB.min.y - (g_LocalAABBs["left_leg"].min.y * Model_Scale.y);
-			Model_Velocity.y = 0;
+		// 바닥 또는 천장과 충돌 처리 (Box 기반 보정 유지)
+		if (Model_Velocity.y < 0) { // 바닥 충돌
+			if (g_LocalAABBs.count("left_leg")) {
+				//Model_Transform.y = boxWorldAABB.min.y - (g_LocalAABBs["left_leg"].min.y * Model_Scale.y);
+			}
+			Model_Velocity.y = 0.0f;
 			is_Jumping = false;
 		}
-		else if (Model_Velocity.y > 0) {
-			// 천장에 닿았을 때 처리
-			Model_Velocity.y = 0;
+		else if (Model_Velocity.y > 0) { // 천장 충돌
+			Model_Velocity.y = 0.0f;
 		}
 	}
 	else {
 		Model_Transform = next_pos_v;
-		if (Model_Transform.y > wallWorldAABB.min.y - (g_LocalAABBs["left_leg"].min.y * Model_Scale.y) + 0.1f) {
-			is_Jumping = true;
-		}
-	}
-
-	if (!is_Jumping) {
-		AABB robotFeetAABB = TransformAABB(g_LocalAABBs["left_leg"], Model_Matrix);
-		if (robotFeetAABB.min.y < wallWorldAABB.min.y) {
-			Model_Transform.y = wallWorldAABB.min.y - (g_LocalAABBs["left_leg"].min.y * Model_Scale.y);
-			Model_Velocity.y = 0;
-		}
+		is_Jumping = true;
 	}
 
 	rotationMatrix = glm::mat4_cast(Model_Orientation);
@@ -771,7 +756,7 @@ void MakeDynamicMatrix() {
 
 	if (LookAtRobot) {
 		AT = Model_Transform;
-		EYE = AT + glm::vec3(0.0f, 20.0f, 40.0f);
+		EYE = AT + glm::vec3(0.0f, 15.0f, 20.0f);
 	}
 
 	LeftArm_Matrix = glm::translate(glm::mat4(1.0f), Arm_Offset);
@@ -789,8 +774,6 @@ void MakeDynamicMatrix() {
 	RightLeg_Matrix = glm::translate(glm::mat4(1.0f), glm::vec3(-Leg_Offset.x, Leg_Offset.y, Leg_Offset.z));
 	RightLeg_Matrix = glm::rotate(RightLeg_Matrix, glm::radians(-Leg_Rotation_Angle.x), glm::vec3(1.0f, 0.0f, 0.0f));
 	RightLeg_Matrix = glm::translate(RightLeg_Matrix, -glm::vec3(-Leg_Offset.x, Leg_Offset.y, Leg_Offset.z));
-
-
 }
 
 void GetUniformLocations() {
@@ -819,6 +802,7 @@ void UpdateUniformMatrices() {
 	glUniformMatrix4fv(RightLegMatrixID, 1, GL_FALSE, &RightLeg_Matrix[0][0]);
 	glUniformMatrix4fv(DoorMatrixID, 1, GL_FALSE, &Door_Matrix[0][0]);
 
+
 	if (PerspectiveMatrixID == -1) std::cerr << "Could not bind uniform Perspective_Matrix\n";
 	if (ViewMatrixID == -1) std::cerr << "Could not bind uniform View_Matrix\n";
 	if (ModelMatrixID == -1) std::cerr << "Could not bind uniform Model_Matrix\n";
@@ -829,6 +813,7 @@ void UpdateUniformMatrices() {
 	if (RightLegMatrixID == -1) std::cerr << "Could not bind uniform RightLeg_Matrix\n";
 	if (DoorMatrixID == -1) std::cerr << "Could not bind uniform Door_Matrix\n";
 
+
 }
 void ComposeOBJColor() {
 	for (auto& file : g_OBJ_Files) {
@@ -838,7 +823,7 @@ void ComposeOBJColor() {
 					glm::vec3(0.6f, 0.6f, 0.6f),
 					glm::vec3(0.2f, 0.2f, 0.2f),
 					glm::vec3(0.6f, 0.6f, 0.6f),
-					glm::vec3(0.8f, 0.2f, 0.2f),	// Door face in red
+					glm::vec3(0.2f, 0.2f, 0.2f),
 					glm::vec3(0.4f, 0.4f, 0.4f),
 					glm::vec3(0.4f, 0.4f, 0.4f)
 				};
@@ -895,11 +880,8 @@ void Type_distinction(const std::string& object_name, GLuint& outTypeID) {
 	else if (object_name == "right_leg") {
 		outTypeID = Figure_Type::RIGHT_LEG;
 	}
-	else if (object_name == "Box_Door") {
-		outTypeID = Figure_Type::BOX_DOOR;
-	}
-	else if (object_name == "Box_Wall") {
-		outTypeID = Figure_Type::BOX_WALL;
+	else if (object_name == "Box") {
+		outTypeID = Figure_Type::BOX;
 	}
 	else {
 		outTypeID = Figure_Type::ETC;

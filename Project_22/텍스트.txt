@@ -1,0 +1,64 @@
+	/*
+	// 3. 충돌 감지 및 반응 (축 분리)
+	AABB boxWorldAABB = TransformAABB(g_LocalAABBs["Box"], glm::mat4(1.0f));
+	std::vector<std::string> robot_parts = { "body", "left_arm", "right_arm", "left_leg", "right_leg" };
+
+	glm::mat4 rotationMatrix = glm::mat4_cast(Model_Orientation);
+	glm::mat4 correctionMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+	// 3-1. 수평 이동 (XZ)
+	glm::vec3 next_pos_h = Model_Transform + glm::vec3(horizontal_move.x, 0.0f, horizontal_move.z);
+	glm::mat4 nextModelMatrix_h = glm::translate(glm::mat4(1.0f), next_pos_h);
+	nextModelMatrix_h = glm::scale(nextModelMatrix_h, Model_Scale);
+	nextModelMatrix_h = nextModelMatrix_h * rotationMatrix * correctionMatrix;
+
+	bool horizontalCollision = false;
+	for (const auto& part_name : robot_parts) {
+		if (g_LocalAABBs.count(part_name)) {
+			AABB robotPartWorldAABB = TransformAABB(g_LocalAABBs[part_name], nextModelMatrix_h);
+			// 로봇의 다음 위치가 Box 내부에 있지 않다면 충돌로 간주
+			if (!IsAABBInside(robotPartWorldAABB, boxWorldAABB)) {
+				horizontalCollision = true;
+				break;
+			}
+		}
+	}
+	if (!horizontalCollision) {
+		Model_Transform = next_pos_h;
+	}
+
+	// 3-2. 수직 이동 (Y)
+	glm::vec3 vertical_move = glm::vec3(0.0f, Model_Velocity.y * deltaTime, 0.0f);
+	glm::vec3 next_pos_v = Model_Transform + vertical_move;
+	glm::mat4 nextModelMatrix_v = glm::translate(glm::mat4(1.0f), next_pos_v);
+	nextModelMatrix_v = glm::scale(nextModelMatrix_v, Model_Scale);
+	nextModelMatrix_v = nextModelMatrix_v * rotationMatrix * correctionMatrix;
+
+	bool verticalCollision = false;
+	for (const auto& part_name : robot_parts) {
+		if (g_LocalAABBs.count(part_name)) {
+			AABB robotPartWorldAABB = TransformAABB(g_LocalAABBs[part_name], nextModelMatrix_v);
+			// 로봇의 다음 위치가 Box 내부에 있지 않다면 충돌로 간주
+			if (!IsAABBInside(robotPartWorldAABB, boxWorldAABB)) {
+				verticalCollision = true;
+				break;
+			}
+		}
+	}
+
+	if (verticalCollision) {
+		// 바닥 또는 천장과 충돌
+		if (Model_Velocity.y < 0) { // 바닥
+			Model_Transform.y = boxWorldAABB.min.y - (g_LocalAABBs["left_leg"].min.y * Model_Scale.y); // 발바닥 맞춤
+			Model_Velocity.y = 0;
+			is_Jumping = false;
+		}
+		else if (Model_Velocity.y > 0) { // 천장
+			Model_Velocity.y = 0;
+		}
+	}
+	else {
+		Model_Transform = next_pos_v;
+		is_Jumping = true;
+	}
+	*/

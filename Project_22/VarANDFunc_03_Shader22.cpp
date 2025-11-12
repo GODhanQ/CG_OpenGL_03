@@ -35,11 +35,11 @@ GLuint BodyMatrixID{};
 float Animation_Time{ 0.0f }, Animation_Speed{ 5.0f };
 GLuint LeftArmMatrixID{}, RightArmMatrixID{};
 glm::vec3 Arm_Offset(0.0f, 7.5f ,0.0f), Arm_Rotation_Angle(0.0f, 0.0f, 0.0f);
-float Arm_Rotation_Speed{ 5.0f };
+float Arm_Rotation_Speed{ 5.0f }, Arm_Rotation_Max_Angle{ 60.0f };
 
 GLuint LeftLegMatrixID{}, RightLegMatrixID{};
 glm::vec3 Leg_Offset(0.0f, 4.5f, 0.0f), Leg_Rotation_Angle(0.0f, 0.0f, 0.0f);
-float Leg_Rotation_Speed{ 5.0f };
+float Leg_Rotation_Speed{ 5.0f }, Leg_Rotation_Max_Angle{ 60.0f };
 
 bool LookAtRobot{ false };
 

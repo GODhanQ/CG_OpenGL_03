@@ -95,11 +95,11 @@ extern GLuint BodyMatrixID;
 extern float Animation_Time, Animation_Speed;
 extern GLuint LeftArmMatrixID, RightArmMatrixID;
 extern glm::vec3 Arm_Offset, Arm_Rotation_Angle;
-extern float Arm_Rotation_Speed;
+extern float Arm_Rotation_Speed, Arm_Rotation_Max_Angle;
 
 extern GLuint LeftLegMatrixID, RightLegMatrixID;
 extern glm::vec3 Leg_Offset, Leg_Rotation_Angle;
-extern float Leg_Rotation_Speed;
+extern float Leg_Rotation_Speed, Leg_Rotation_Max_Angle;
 
 extern bool LookAtRobot;
 

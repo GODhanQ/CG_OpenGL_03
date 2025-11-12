@@ -42,5 +42,8 @@
     <Object Include="OBJ\Box.obj">
       <Filter>리소스 파일</Filter>
     </Object>
+    <Object Include="OBJ\Cube.obj">
+      <Filter>리소스 파일</Filter>
+    </Object>
   </ItemGroup>
 </Project>
