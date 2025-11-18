@@ -681,6 +681,7 @@ void MakeDynamicMatrix() {
 		// (A) Box 규칙: 로봇 파트는 Box 내부에 있어야 함 — 벗어나면 충돌
 		if (!IsAABBInside(robotPartWorldAABB, boxWorldAABB)) {
 			horizontalCollision = true;
+			Model_Movement_Factor = -Model_Movement_Factor * 0.1f;
 			break;
 		}
 
